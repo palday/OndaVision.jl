@@ -343,7 +343,8 @@ end
 
 @testset "parse_amplifier_setup — no amplifier section" begin
     @test parse_amplifier_setup("") === nothing
-    @test parse_amplifier_setup("Some free-form comment with no amplifier block") === nothing
+    @test parse_amplifier_setup("Some free-form comment with no amplifier block") ===
+          nothing
     # A file without a Comment section at all
     d = read_vhdr(vhdr("testv2.vhdr"))
     @test !haskey(d, "Comment")
