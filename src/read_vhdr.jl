@@ -1,5 +1,3 @@
-const _SUPPORTED_CODEPAGES = ("UTF-8", "Latin-1")
-
 # Matches both the canonical form ("BrainVision") and the legacy form ("Brain Vision").
 const _IDENTIFICATION_RE = r"^Brain ?Vision Data Exchange Header File Version \d+\.\d+"
 
@@ -63,38 +61,6 @@ function read_vhdr(io::IO; codepage::Union{AbstractString,Nothing}=nothing)
     cp = codepage === nothing ? _detect_codepage(bytes) : codepage
     content = cp == "UTF-8" ? String(copy(bytes)) : _latin1_to_utf8(bytes)
     return _parse_vhdr(content)
-end
-
-# Scan the raw bytes for "Codepage=" (all ASCII, safe for any encoding).
-# Returns "UTF-8" if found and that value is present, or "Latin-1" otherwise.
-function _detect_codepage(bytes::Vector{UInt8})
-    pattern = b"Codepage="
-    idx = findfirst(pattern, bytes)
-    idx === nothing && return "Latin-1"
-    start = last(idx) + 1
-    stop = start
-    n = length(bytes)
-    while stop <= n && bytes[stop] != UInt8('\n') && bytes[stop] != UInt8('\r')
-        stop += 1
-    end
-    value = String(bytes[start:(stop - 1)])
-    return strip(value)
-end
-
-# Convert Latin-1 (ISO-8859-1) bytes to a UTF-8 Julia String.
-function _latin1_to_utf8(bytes::Vector{UInt8})
-    buf = IOBuffer()
-    for b in bytes
-        if b < 0x80
-            write(buf, b)
-        else
-            # Latin-1 supplement maps directly to U+0080..U+00FF,
-            # encoded in UTF-8 as two bytes.
-            write(buf, 0xC0 | (b >> 6) % UInt8)
-            write(buf, 0x80 | (b & 0x3F) % UInt8)
-        end
-    end
-    return String(take!(buf))
 end
 
 # Parse a decoded (UTF-8) VHDR string into a nested Dict, validating structural
