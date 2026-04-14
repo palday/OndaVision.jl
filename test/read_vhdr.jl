@@ -420,6 +420,67 @@ end
     @test ch2.name[28] == "CP 6"
 end
 
+@testset "parse_software_filters — not present / disabled" begin
+    @test parse_software_filters("") === nothing
+    @test parse_software_filters("Some comment with no software filters") === nothing
+    # Sections present but marked Disabled
+    d = read_vhdr(vhdr("test.vhdr"))
+    @test parse_software_filters(d["Comment"]) === nothing
+    d2 = read_vhdr(vhdr("test_units.vhdr"))
+    @test parse_software_filters(d2["Comment"]) === nothing
+    # No Comment section at all
+    d3 = read_vhdr(vhdr("testv2.vhdr"))
+    @test !haskey(d3, "Comment")
+end
+
+@testset "parse_software_filters — 4-column table (no amplifier setup)" begin
+    # Craft a comment with only a Software Filters table and no Amplifier Setup
+    comment = """
+    S o f t w a r e  F i l t e r s
+    ==============================
+    #     Low Cutoff [s]   High Cutoff [Hz]   Notch [Hz]
+    1      0.9              50                 Off
+    2      0.9              50                 Off
+    """
+    sw = parse_software_filters(comment)
+    @test sw !== nothing
+    @test sw isa NamedTuple
+    @test hasproperty(sw, :number)
+    @test !hasproperty(sw, :name)
+    @test hasproperty(sw, :low_cutoff)
+    @test hasproperty(sw, :high_cutoff)
+    @test hasproperty(sw, :notch)
+    @test length(sw.number) == 2
+    @test sw.number[1] == "1"
+    @test sw.low_cutoff[1] == "0.9"
+    @test sw.high_cutoff[1] == "50"
+    @test sw.notch[1] == "Off"
+end
+
+@testset "parse_software_filters — 5-column table (with amplifier names)" begin
+    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    sw = parse_software_filters(d["Comment"])
+    @test sw !== nothing
+    @test hasproperty(sw, :name)
+    @test length(sw.number) == 29
+    # First channel: name from Amplifier Setup, filter values from Software Filters
+    @test sw.number[1] == "1"
+    @test sw.name[1] == "F7"
+    @test sw.low_cutoff[1] == "0.9"
+    @test sw.high_cutoff[1] == "50"
+    @test sw.notch[1] == "50"
+    # Last channel
+    @test sw.number[29] == "29"
+    @test sw.name[29] == "HEOGre"
+end
+
+@testset "parse_software_filters — channel name with spaces" begin
+    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
+    sw = parse_software_filters(d["Comment"])
+    @test sw !== nothing
+    @test sw.name[2] == "F3 3 part"
+end
+
 @testset "missing Codepage warns but does not error" begin
     content = """
 Brain Vision Data Exchange Header File Version 1.0

@@ -2,7 +2,7 @@ module OndaVision
 
 using Onda
 
-export read_vhdr, parse_amplifier_setup
+export read_vhdr, parse_amplifier_setup, parse_software_filters
 
 greet() = print("Hello World!")
 
@@ -296,6 +296,71 @@ function parse_amplifier_setup(comment::String)
 
     channels = NamedTuple{_AMP_CHANNEL_COLS}(cols)
     return (info, channels)
+end
+
+# Column names for the Software Filters table, without and with channel names.
+const _SW_FILTER_COLS_BASE = (:number, :low_cutoff, :high_cutoff, :notch)
+const _SW_FILTER_COLS_WITH_NAMES = (:number, :name, :low_cutoff, :high_cutoff, :notch)
+
+"""
+    parse_software_filters(comment::String) -> NamedTuple or nothing
+
+Parse the "Software Filters" sub-section from a VHDR `[Comment]` string.
+
+Returns `nothing` if the section is absent or marked as "Disabled".
+
+Otherwise returns a Tables.jl-compatible `NamedTuple` column table.  When an
+"Amplifier Setup" section is also present in `comment` and its channel count
+matches, a `name` column (channel names from the amplifier table) is inserted
+after `number`, giving 5 columns total:
+
+    number  name  low_cutoff  high_cutoff  notch
+
+Without matching amplifier data the table has 4 columns:
+
+    number  low_cutoff  high_cutoff  notch
+
+Each column is a `Vector{String}` with one entry per channel row.
+"""
+function parse_software_filters(comment::String)
+    lines = split(comment, r"\r?\n")
+
+    # Locate the "S o f t w a r e  F i l t e r s" banner line.
+    sw_idx = findfirst(l -> startswith(strip(l), "S o f t w a r e"), lines)
+    sw_idx === nothing && return nothing
+
+    # Find the channel-table header line (starts with "#") after the banner.
+    # If not present the section contains prose (e.g. "Disabled") — return nothing.
+    hash_idx = findnext(l -> startswith(strip(l), "#"), lines, sw_idx + 1)
+    hash_idx === nothing && return nothing
+
+    # Parse 4-column data rows.  Each row starts with a digit (the channel number).
+    cols = ntuple(_ -> String[], 4)
+    row_idx = hash_idx + 1
+    while row_idx <= length(lines)
+        l = strip(lines[row_idx])
+        row_idx += 1
+        (isempty(l) || !isdigit(first(l))) && break
+        tokens = split(l, r"  +")
+        for col in 1:4
+            push!(cols[col], col <= length(tokens) ? String(strip(tokens[col])) : "")
+        end
+    end
+
+    isempty(cols[1]) && return nothing
+
+    # Augment with channel names from the Amplifier Setup section when available
+    # and the row counts agree.
+    amp_result = parse_amplifier_setup(comment)
+    if amp_result !== nothing
+        _, amp_ch = amp_result
+        if amp_ch !== nothing && length(amp_ch.name) == length(cols[1])
+            return NamedTuple{_SW_FILTER_COLS_WITH_NAMES}((cols[1], amp_ch.name,
+                                                           cols[2], cols[3], cols[4]))
+        end
+    end
+
+    return NamedTuple{_SW_FILTER_COLS_BASE}(cols)
 end
 
 end # module OndaVision
