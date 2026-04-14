@@ -6,3 +6,4 @@ end
 
 @testset "read_vhdr" include("read_vhdr.jl")
 @testset "read_vmrk" include("read_vmrk.jl")
+@testset "read_brainvision" include("read_brainvision.jl")
