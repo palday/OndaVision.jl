@@ -28,7 +28,7 @@ end
     d_int16 = read_vhdr(vhdr("test.vhdr"))
     @test d_int16["Binary Infos"]["BinaryFormat"] == "INT_16"
 
-    d_float32 = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    d_float32 = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
     @test d_float32["Binary Infos"]["BinaryFormat"] == "IEEE_FLOAT_32"
 end
 
@@ -57,7 +57,7 @@ end
 end
 
 @testset "channel names with spaces" begin
-    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
+    d = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
     @test d["Channel Infos"]["Ch2"] == "F3 3 part,,0.1"
 end
 
@@ -65,7 +65,7 @@ end
     d_mux = read_vhdr(vhdr("test.vhdr"))
     @test d_mux["Common Infos"]["DataOrientation"] == "MULTIPLEXED"
 
-    d_vec = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    d_vec = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
     @test d_vec["Common Infos"]["DataOrientation"] == "VECTORIZED"
 end
 
@@ -127,7 +127,7 @@ end
 
 @testset "Latin-1 encoding auto-detected" begin
     # File has no Codepage key — should be treated as Latin-1
-    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    d = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
     ci = d["Common Infos"]
     @test !haskey(ci, "Codepage")
     @test ci["DataFile"] == "test_old_layout_latin1_software_filter.eeg"
@@ -145,9 +145,9 @@ end
     @test d_auto == d_explicit
 
     # Explicit Latin-1 on a Latin-1 file gives the same result as auto-detection
-    d_auto_latin1 = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
-    d_explicit_latin1 = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr");
-                                  codepage="Latin-1")
+    d_auto_latin1 = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    d_explicit_latin1 = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr");
+                                            codepage="Latin-1")
     @test d_auto_latin1 == d_explicit_latin1
 end
 
@@ -393,7 +393,7 @@ end
 end
 
 @testset "parse_amplifier_setup — old format (7-column header)" begin
-    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    d = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
     result = parse_amplifier_setup(d["Comment"])
     @test result !== nothing
     info, ch = result
@@ -410,7 +410,7 @@ end
 
 @testset "parse_amplifier_setup — channel name with spaces" begin
     # Old-layout file where Ch2 is named "F3 3 part" (internal spaces)
-    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
+    d = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
     _, ch = parse_amplifier_setup(d["Comment"])
     @test ch.name[2] == "F3 3 part"
 
@@ -458,7 +458,7 @@ end
 end
 
 @testset "parse_software_filters — 5-column table (with amplifier names)" begin
-    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    d = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
     sw = parse_software_filters(d["Comment"])
     @test sw !== nothing
     @test hasproperty(sw, :name)
@@ -475,7 +475,7 @@ end
 end
 
 @testset "parse_software_filters — channel name with spaces" begin
-    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
+    d = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
     sw = parse_software_filters(d["Comment"])
     @test sw !== nothing
     @test sw.name[2] == "F3 3 part"
@@ -501,7 +501,7 @@ end
 end
 
 @testset "parse_impedances — all numeric" begin
-    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    d = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
     imp = parse_impedances(d["Comment"])
     @test imp isa Dict{String,Union{Float64,Missing}}
     @test imp["F7"] === 0.0
@@ -529,7 +529,7 @@ end
     @test haskey(imp, "CP 6")
     @test ismissing(imp["CP 6"])
 
-    d2 = read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
+    d2 = @suppress read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
     imp2 = parse_impedances(d2["Comment"])
     @test haskey(imp2, "F3 3 part")
     @test imp2["F3 3 part"] === 0.0
