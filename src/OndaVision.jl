@@ -7,5 +7,6 @@ export read_vhdr, parse_amplifier_setup, parse_software_filters, parse_impedance
 greet() = print("Hello World!")
 
 include("read_vhdr.jl")
+include("read_vmrk.jl")
 
 end # module OndaVision
