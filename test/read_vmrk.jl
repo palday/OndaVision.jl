@@ -341,3 +341,56 @@ DataFile=test.eeg
     @test isempty(markers.type)
     @test isempty(markers.position)
 end
+
+@testset "get_segments — single segment" begin
+    d = read_vmrk(_vmrk("test.vmrk"))
+    segs = get_segments(d)
+    @test segs isa NamedTuple
+    @test hasproperty(segs, :type)
+    @test hasproperty(segs, :position)
+    @test hasproperty(segs, :date)
+    @test length(segs.type) == 1
+    @test segs.type[1] == "New Segment"
+    @test segs.position[1] == 1
+    @test segs.date[1] == "20131113161403794232"
+end
+
+@testset "get_segments — multiple segments" begin
+    d = @suppress read_vmrk(_vmrk("test_old_layout_latin1_software_filter.vmrk"))
+    segs = get_segments(d)
+    @test length(segs.type) == 2
+    @test all(==("New Segment"), segs.type)
+    @test segs.position[1] == 1
+    @test segs.position[2] == 2
+    @test segs.date[1] == "20070716122240937454"
+    @test segs.date[2] == "20070716122240937455"
+end
+
+@testset "get_segments — no segments" begin
+    content = """
+BrainVision Data Exchange Marker File Version 1.0
+
+[Common Infos]
+Codepage=UTF-8
+DataFile=test.eeg
+
+[Marker Infos]
+Mk1=Stimulus,S1,100,1,0
+Mk2=Response,R1,200,1,0
+"""
+    d = read_vmrk(IOBuffer(content))
+    segs = get_segments(d)
+    @test segs isa NamedTuple
+    @test isempty(segs.type)
+    @test isempty(segs.position)
+    @test isempty(segs.date)
+end
+
+@testset "get_segments — non-segment markers excluded" begin
+    d = read_vmrk(_vmrk("test.vmrk"))
+    segs = get_segments(d)
+    # test.vmrk has 14 markers total, only 1 is New Segment
+    @test length(segs.type) == 1
+    @test length(d["Marker Infos"].type) == 14
+    @test all(==("New Segment"), segs.type)
+end

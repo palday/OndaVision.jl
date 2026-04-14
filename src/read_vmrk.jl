@@ -206,3 +206,25 @@ function _parse_marker_infos(entries::Dict{String,String})
     return NamedTuple{_MARKER_COLS}((types, descriptions, positions, points_list,
                                     channels, dates))
 end
+
+"""
+    get_segments(vmrk::Dict{String,Any}) -> NamedTuple
+
+Extract the "New Segment" markers from the return value of [`read_vmrk`](@ref).
+
+Each "New Segment" marker records the start of a new continuous recording
+block.  The `date` field, when present, contains the recording timestamp in
+the format `YYYYMMDDhhmmssμμμμμμ` (year, month, day, hour, minute, second,
+microsecond).
+
+Returns a Tables.jl-compatible `NamedTuple` column table with the same
+columns as `"Marker Infos"` (`type`, `description`, `position`, `points`,
+`channel`, `date`), containing only the rows where `type == "New Segment"`.
+"""
+function get_segments(vmrk::Dict{String,Any})
+    markers = vmrk["Marker Infos"]
+    idx = findall(==("New Segment"), markers.type)
+    return NamedTuple{_MARKER_COLS}((markers.type[idx], markers.description[idx],
+                                     markers.position[idx], markers.points[idx],
+                                     markers.channel[idx], markers.date[idx]))
+end
