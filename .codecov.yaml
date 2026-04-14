@@ -1,0 +1,10 @@
+---
+comment: true
+flag_management:
+  default_rules:
+    carryforward: true
+  individual_flags:
+    - name: Splinter
+      paths:
+        - src/**
+        - ext/**
