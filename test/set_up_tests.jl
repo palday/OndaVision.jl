@@ -1,4 +1,4 @@
 using Aqua
 using OndaVision
-using PyMNE
+using Suppressor
 using Test
