@@ -552,6 +552,6 @@ BinaryFormat=INT_16
 [Channel Infos]
 Ch1=Fp1,,0.5,µV
 """
-    result = @test_warn r"Codepage" OndaVision._parse_vhdr(content)
+    result = @test_logs (:warn, r"Codepage") OndaVision._parse_vhdr(content)
     @test haskey(result, "Common Infos")
 end
