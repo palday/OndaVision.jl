@@ -161,12 +161,12 @@ function _parse_marker_infos(entries::Dict{String,String})
                   "(found $n markers, expected consecutive numbering from Mk1)")
     end
 
-    types        = String[]
+    types = String[]
     descriptions = String[]
-    positions    = Int[]
-    points_list  = Int[]
-    channels     = Int[]
-    dates        = Union{String,Missing}[]
+    positions = Int[]
+    points_list = Int[]
+    channels = Int[]
+    dates = Union{String,Missing}[]
 
     for i in 1:n
         value = entries["Mk$i"]
@@ -204,7 +204,7 @@ function _parse_marker_infos(entries::Dict{String,String})
     end
 
     return NamedTuple{_MARKER_COLS}((types, descriptions, positions, points_list,
-                                    channels, dates))
+                                     channels, dates))
 end
 
 """

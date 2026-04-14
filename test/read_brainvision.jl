@@ -17,10 +17,10 @@ end
 # All three files contain a single "New Segment" marker and produce a 2-D result.
 # MNE and OndaVision must agree element-wise.
 
-@testset "PyMNE comparison — $name" for name in [
-        "testv2.vhdr", "test_float32_vectorized.vhdr"]
+@testset "PyMNE comparison — $name" for name in
+                                        ["testv2.vhdr", "test_float32_vectorized.vhdr"]
     path = _vhdr(name)
-    ov  = read_brainvision(path)
+    ov = read_brainvision(path)
     mne = _mne_load(path)
     @test size(ov) == size(mne)
     @test ov ≈ mne
@@ -31,7 +31,7 @@ end
     # MNE applies different per-unit scaling for unknown units (no ×1e-6),
     # so comparing raw MNE output ×1e6 is only valid for the 26 µV channels.
     path = _vhdr("test.vhdr")
-    ov  = read_brainvision(path)
+    ov = read_brainvision(path)
     mne = _mne_load(path)
     @test size(ov) == size(mne)
     @test ov[1:26, :] ≈ mne[1:26, :]
@@ -82,7 +82,7 @@ end
         # MULTIPLEXED binary: ch1_t1,ch2_t1, ch1_t2,ch2_t2, …
         raw = Int16[1, 11, 2, 12, 3, 13, 4, 14, 5, 15, 6, 16]
         open(joinpath(dir, "multiseg.eeg"), "w") do io
-            write(io, htol.(raw))
+            return write(io, htol.(raw))
         end
 
         write(joinpath(dir, "multiseg.vhdr"), """
@@ -135,20 +135,21 @@ end
             Mk1=New Segment,,1,1,0
             """)
 
-        write(joinpath(dir, "test.vhdr"), """
-            BrainVision Data Exchange Header File Version 1.0
-            [Common Infos]
-            Codepage=UTF-8
-            DataFile=test.eeg
-            MarkerFile=mismatch.vmrk
-            DataFormat=BINARY
-            DataOrientation=MULTIPLEXED
-            NumberOfChannels=32
-            SamplingInterval=1000
-            [Binary Infos]
-            BinaryFormat=INT_16
-            [Channel Infos]
-            """ * join(["Ch$i=Ch$i,,0.5,µV" for i in 1:32], "\n") * "\n")
+        write(joinpath(dir, "test.vhdr"),
+              """
+BrainVision Data Exchange Header File Version 1.0
+[Common Infos]
+Codepage=UTF-8
+DataFile=test.eeg
+MarkerFile=mismatch.vmrk
+DataFormat=BINARY
+DataOrientation=MULTIPLEXED
+NumberOfChannels=32
+SamplingInterval=1000
+[Binary Infos]
+BinaryFormat=INT_16
+[Channel Infos]
+""" * join(["Ch$i=Ch$i,,0.5,µV" for i in 1:32], "\n") * "\n")
 
         @suppress @test_logs (:warn, r"DataFile.*differs|differs.*DataFile") begin
             result = read_brainvision(joinpath(dir, "test.vhdr"))
@@ -161,20 +162,21 @@ end
     mktempdir() do dir
         cp(_vhdr("test.eeg"), joinpath(dir, "test.eeg"))
 
-        write(joinpath(dir, "test.vhdr"), """
-            BrainVision Data Exchange Header File Version 1.0
-            [Common Infos]
-            Codepage=UTF-8
-            DataFile=test.eeg
-            MarkerFile=nonexistent.vmrk
-            DataFormat=BINARY
-            DataOrientation=MULTIPLEXED
-            NumberOfChannels=32
-            SamplingInterval=1000
-            [Binary Infos]
-            BinaryFormat=INT_16
-            [Channel Infos]
-            """ * join(["Ch$i=Ch$i,,0.5,µV" for i in 1:32], "\n") * "\n")
+        write(joinpath(dir, "test.vhdr"),
+              """
+BrainVision Data Exchange Header File Version 1.0
+[Common Infos]
+Codepage=UTF-8
+DataFile=test.eeg
+MarkerFile=nonexistent.vmrk
+DataFormat=BINARY
+DataOrientation=MULTIPLEXED
+NumberOfChannels=32
+SamplingInterval=1000
+[Binary Infos]
+BinaryFormat=INT_16
+[Channel Infos]
+""" * join(["Ch$i=Ch$i,,0.5,µV" for i in 1:32], "\n") * "\n")
 
         @suppress @test_logs (:warn, r"marker file.*not found") begin
             result = read_brainvision(joinpath(dir, "test.vhdr"))

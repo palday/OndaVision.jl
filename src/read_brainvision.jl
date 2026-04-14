@@ -40,9 +40,9 @@ applied.
 """
 function read_brainvision(vhdr_filename; codepage=nothing)
     vhdr = read_vhdr(vhdr_filename; codepage)
-    ci   = vhdr["Common Infos"]
-    bi   = vhdr["Binary Infos"]
-    ch   = vhdr["Channel Infos"]
+    ci = vhdr["Common Infos"]
+    bi = vhdr["Binary Infos"]
+    ch = vhdr["Channel Infos"]
 
     # --- Validate supported format fields ---
     data_format = ci["DataFormat"]
@@ -92,7 +92,7 @@ function read_brainvision(vhdr_filename; codepage=nothing)
     # --- Read binary sample data ---
     T = binary_format == "INT_16" ? Int16 : Float32
     bytes = read(eeg_file)
-    nb    = length(bytes)
+    nb = length(bytes)
     nb % sizeof(T) == 0 ||
         error("EEG data file size ($nb bytes) is not a multiple of the sample " *
               "size ($(sizeof(T)) bytes for BinaryFormat \"$binary_format\")")
@@ -124,14 +124,14 @@ function read_brainvision(vhdr_filename; codepage=nothing)
     end
 
     segments = get_segments(vmrk)
-    n_segs   = length(segments.position)
+    n_segs = length(segments.position)
 
     n_segs <= 1 && return data   # 0 or 1 segment → 2D
 
     # Compute per-segment boundaries (1-based sample indices).
     positions = segments.position
     starts = positions
-    ends   = vcat(positions[2:end] .- 1, [n_total])
+    ends = vcat(positions[2:end] .- 1, [n_total])
     lengths = ends .- starts .+ 1
 
     if allequal(lengths)
@@ -151,8 +151,8 @@ end
 function _parse_resolutions(ch_info::Dict{String,String}, n_channels::Int)
     resolutions = Vector{Float64}(undef, n_channels)
     for i in 1:n_channels
-        entry  = ch_info["Ch$i"]
-        parts  = split(entry, ',')
+        entry = ch_info["Ch$i"]
+        parts = split(entry, ',')
         res_str = length(parts) >= 3 ? strip(parts[3]) : ""
         resolutions[i] = isempty(res_str) ? 1.0 : parse(Float64, res_str)
     end
