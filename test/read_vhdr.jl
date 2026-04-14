@@ -481,6 +481,60 @@ end
     @test sw.name[2] == "F3 3 part"
 end
 
+@testset "parse_impedances — not present" begin
+    @test parse_impedances("") === nothing
+    @test parse_impedances("Some comment with no impedance block") === nothing
+    d = read_vhdr(vhdr("testv2.vhdr"))
+    @test !haskey(d, "Comment")
+end
+
+@testset "parse_impedances — all unknown (???)" begin
+    d = read_vhdr(vhdr("test.vhdr"))
+    imp = parse_impedances(d["Comment"])
+    @test imp isa Dict{String,Union{Float64,Missing}}
+    @test ismissing(imp["FP1"])
+    @test ismissing(imp["ReRef"])
+    # Ref and Gnd have numeric values even in the all-??? file
+    @test imp["Ref"] === 0.0
+    @test imp["Gnd"] === 4.0
+    @test length(imp) == 34  # 32 channels + Ref + Gnd
+end
+
+@testset "parse_impedances — all numeric" begin
+    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    imp = parse_impedances(d["Comment"])
+    @test imp isa Dict{String,Union{Float64,Missing}}
+    @test imp["F7"] === 0.0
+    @test imp["HEOGre"] === 5.0
+    @test !any(ismissing, values(imp))
+    @test length(imp) == 29
+end
+
+@testset "parse_impedances — mixed values and actiCAP preamble" begin
+    # test_mixed_lowpass has "Impedances Imported from actiCAP..." before the header
+    d = read_vhdr(vhdr("test_mixed_lowpass.vhdr"))
+    imp = parse_impedances(d["Comment"])
+    @test imp isa Dict{String,Union{Float64,Missing}}
+    # Standard channels are unknown
+    @test ismissing(imp["FP1"])
+    # Non-EEG channels have numeric impedances
+    @test imp["ECG+"] === 35.0
+    @test imp["ECG-"] === 46.0
+    @test imp["Gnd"] === 2.5
+end
+
+@testset "parse_impedances — channel name with space" begin
+    d = read_vhdr(vhdr("test_mixed_lowpass.vhdr"))
+    imp = parse_impedances(d["Comment"])
+    @test haskey(imp, "CP 6")
+    @test ismissing(imp["CP 6"])
+
+    d2 = read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
+    imp2 = parse_impedances(d2["Comment"])
+    @test haskey(imp2, "F3 3 part")
+    @test imp2["F3 3 part"] === 0.0
+end
+
 @testset "missing Codepage warns but does not error" begin
     content = """
 Brain Vision Data Exchange Header File Version 1.0

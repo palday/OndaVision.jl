@@ -2,7 +2,7 @@ module OndaVision
 
 using Onda
 
-export read_vhdr, parse_amplifier_setup, parse_software_filters
+export read_vhdr, parse_amplifier_setup, parse_software_filters, parse_impedances
 
 greet() = print("Hello World!")
 
@@ -361,6 +361,50 @@ function parse_software_filters(comment::String)
     end
 
     return NamedTuple{_SW_FILTER_COLS_BASE}(cols)
+end
+
+"""
+    parse_impedances(comment::String) -> Dict{String, Union{Float64, Missing}} or nothing
+
+Parse the impedance table from a VHDR `[Comment]` string.
+
+Returns `nothing` if no `Impedance [kOhm] at ...` header line is found.
+
+Otherwise returns a `Dict{String, Union{Float64, Missing}}` mapping each
+channel name to its measured impedance in kOhm.  Unknown impedances (recorded
+as `???` in the file) are represented as `missing`.
+
+Channel names may contain spaces (e.g. `"CP 6"`, `"F3 3 part"`) or special
+characters such as `+` and `-`.  The section may be preceded by optional prose
+lines (e.g. `"Impedances Imported from actiCAP Control Software:"`) which are
+ignored.
+"""
+function parse_impedances(comment::String)
+    lines = split(comment, r"\r?\n")
+
+    # Find the "Impedance [kOhm] at HH:MM:SS :" header line.
+    imp_idx = findfirst(l -> occursin("Impedance [kOhm] at", l), lines)
+    imp_idx === nothing && return nothing
+
+    # Parse entries from the next line onwards.
+    # Each entry has the form "Name:   value" where value is a number or "???".
+    # Blank lines and lines beginning with ";" are skipped.
+    # The first non-blank, non-comment line that does not match the entry pattern
+    # terminates the section.
+    result = Dict{String,Union{Float64,Missing}}()
+    for line in @view lines[(imp_idx + 1):end]
+        l = strip(line)
+        isempty(l) && continue
+        startswith(l, ";") && continue
+        m = match(r"^(.+?):\s+(.+)$", l)
+        m === nothing && break
+        name = String(strip(m[1]))
+        val_str = String(strip(m[2]))
+        result[name] = val_str == "???" ? missing : parse(Float64, val_str)
+    end
+
+    isempty(result) && return nothing
+    return result
 end
 
 end # module OndaVision
