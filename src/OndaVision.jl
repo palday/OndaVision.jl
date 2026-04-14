@@ -43,7 +43,22 @@ function read_vhdr(filename; kwargs...)
     end
 end
 
+const _SUPPORTED_CODEPAGES = ("UTF-8", "Latin-1")
+
+# Matches both the canonical form ("BrainVision") and the legacy form ("Brain Vision").
+const _IDENTIFICATION_RE = r"^Brain ?Vision Data Exchange Header File Version \d+\.\d+"
+
+# Keys that the spec marks as mandatory in their respective sections.
+const _REQUIRED_COMMON_INFOS_KEYS = ("DataFile", "DataFormat", "DataOrientation",
+                                     "NumberOfChannels", "SamplingInterval")
+const _REQUIRED_BINARY_INFOS_KEYS = ("BinaryFormat",)
+
 function read_vhdr(io::IO; codepage::Union{AbstractString,Nothing}=nothing)
+    if codepage !== nothing && codepage ∉ _SUPPORTED_CODEPAGES
+        throw(ArgumentError("unsupported codepage \"$codepage\"; " *
+                            "supported values are: " *
+                            join(repr.(_SUPPORTED_CODEPAGES), ", ")))
+    end
     bytes = read(io)
     cp = codepage === nothing ? _detect_codepage(bytes) : codepage
     content = cp == "UTF-8" ? String(copy(bytes)) : _latin1_to_utf8(bytes)
@@ -82,16 +97,21 @@ function _latin1_to_utf8(bytes::Vector{UInt8})
     return String(take!(buf))
 end
 
-# Parse a decoded (UTF-8) VHDR string into a nested Dict.
+# Parse a decoded (UTF-8) VHDR string into a nested Dict, validating structural
+# requirements from the BVCDF 1.0 specification along the way.
 function _parse_vhdr(content::String)
     result = Dict{String,Any}()
 
     # Split on any line ending (CRLF or LF)
     lines = split(content, r"\r?\n")
-    isempty(lines) && error("Empty VHDR file")
 
     # The very first line must be the identification line.
     identification = rstrip(lines[1])
+    isempty(identification) && error("VHDR file is empty")
+    if !occursin(_IDENTIFICATION_RE, identification)
+        error("unrecognised VHDR identification line: \"$identification\"\n" *
+              "expected a line matching: $_IDENTIFICATION_RE")
+    end
     result["identification"] = identification
 
     current_section = nothing
@@ -139,7 +159,79 @@ function _parse_vhdr(content::String)
         result["Comment"] = join(comment_lines, "\n")
     end
 
+    _validate_vhdr(result)
+
     return result
+end
+
+# Post-parse structural validation: checks the requirements stated in the BVCDF 1.0 spec.
+function _validate_vhdr(result::Dict{String,Any})
+    # --- Mandatory sections ---
+    for section in ("Common Infos", "Binary Infos", "Channel Infos")
+        haskey(result, section) ||
+            error("mandatory section [$section] is missing from the VHDR file")
+    end
+
+    ci = result["Common Infos"]
+    bi = result["Binary Infos"]
+    ch = result["Channel Infos"]
+
+    # --- Mandatory Common Infos keys ---
+    for key in _REQUIRED_COMMON_INFOS_KEYS
+        haskey(ci, key) ||
+            error("mandatory key \"$key\" is missing from [Common Infos]")
+    end
+
+    # Codepage is mandatory per spec but absent in old-style files; warn rather than error.
+    if !haskey(ci, "Codepage")
+        @warn "\"Codepage\" key is missing from [Common Infos]; assuming Latin-1 encoding"
+    end
+
+    # --- Mandatory Binary Infos keys ---
+    for key in _REQUIRED_BINARY_INFOS_KEYS
+        haskey(bi, key) ||
+            error("mandatory key \"$key\" is missing from [Binary Infos]")
+    end
+
+    # --- Channel count consistency ---
+    n_channels_str = ci["NumberOfChannels"]
+    n_channels = tryparse(Int, n_channels_str)
+    if n_channels === nothing
+        error("NumberOfChannels value \"$n_channels_str\" is not a valid integer")
+    end
+    if n_channels <= 0
+        error("NumberOfChannels must be > 0, got $n_channels")
+    end
+
+    n_parsed = length(ch)
+    if n_parsed != n_channels
+        error("NumberOfChannels is $n_channels but $n_parsed channel " *
+              "$(n_parsed == 1 ? "entry was" : "entries were") found in [Channel Infos]")
+    end
+
+    # Channel numbers must be the consecutive sequence Ch1..ChN.
+    for i in 1:n_channels
+        haskey(ch, "Ch$i") ||
+            error("channel entry \"Ch$i\" is missing from [Channel Infos] " *
+                  "(NumberOfChannels = $n_channels)")
+    end
+
+    # --- Coordinates count (if section is present) ---
+    if haskey(result, "Coordinates")
+        coords = result["Coordinates"]
+        n_coords = length(coords)
+        if n_coords != n_channels
+            error("NumberOfChannels is $n_channels but $n_coords coordinate " *
+                  "$(n_coords == 1 ? "entry was" : "entries were") found in [Coordinates]")
+        end
+        for i in 1:n_channels
+            haskey(coords, "Ch$i") ||
+                error("coordinate entry \"Ch$i\" is missing from [Coordinates] " *
+                      "(NumberOfChannels = $n_channels)")
+        end
+    end
+
+    return nothing
 end
 
 end # module OndaVision

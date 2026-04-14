@@ -113,7 +113,7 @@ end
         end
     end
 end
-
+>
 @testset "v2 extra sections" begin
     d = read_vhdr(vhdr("testv2.vhdr"))
     # User Infos and Channel User Infos exist but contain only ; comments
@@ -174,4 +174,190 @@ end
     @test ch["Ch3"] == "F3,,0.0000005,V"
     @test ch["Ch4"] == "F4,,0.5,uV"
     @test ch["Ch5"] == "C3,,0.5,µV"
+end
+
+@testset "unsupported codepage keyword" begin
+    err = @test_throws ArgumentError read_vhdr(vhdr("test.vhdr"); codepage="Windows-1252")
+    @test occursin("unsupported codepage", err.value.msg)
+    @test occursin("Windows-1252", err.value.msg)
+    @test occursin("UTF-8", err.value.msg)
+end
+
+@testset "bad identification line" begin
+    bad = "Not a BrainVision file\n[Common Infos]\n"
+    err = @test_throws ErrorException OndaVision._parse_vhdr(bad)
+    @test occursin("identification", err.value.msg)
+    @test occursin("Not a BrainVision file", err.value.msg)
+end
+
+@testset "empty file" begin
+    err = @test_throws ErrorException OndaVision._parse_vhdr("")
+    @test occursin("empty", lowercase(err.value.msg))
+end
+
+@testset "missing mandatory section" begin
+    # Missing [Binary Infos]
+    content = """
+Brain Vision Data Exchange Header File Version 1.0
+
+[Common Infos]
+Codepage=UTF-8
+DataFile=test.eeg
+DataFormat=BINARY
+DataOrientation=MULTIPLEXED
+NumberOfChannels=1
+SamplingInterval=1000
+
+[Channel Infos]
+Ch1=Fp1,,0.5,µV
+"""
+    err = @test_throws ErrorException OndaVision._parse_vhdr(content)
+    @test occursin("Binary Infos", err.value.msg)
+    @test occursin("missing", err.value.msg)
+end
+
+@testset "missing mandatory Common Infos key" begin
+    # Missing SamplingInterval
+    content = """
+Brain Vision Data Exchange Header File Version 1.0
+
+[Common Infos]
+Codepage=UTF-8
+DataFile=test.eeg
+DataFormat=BINARY
+DataOrientation=MULTIPLEXED
+NumberOfChannels=1
+
+[Binary Infos]
+BinaryFormat=INT_16
+
+[Channel Infos]
+Ch1=Fp1,,0.5,µV
+"""
+    err = @test_throws ErrorException OndaVision._parse_vhdr(content)
+    @test occursin("SamplingInterval", err.value.msg)
+    @test occursin("missing", err.value.msg)
+end
+
+@testset "channel count mismatch" begin
+    # NumberOfChannels=3 but only 2 entries
+    content = """
+Brain Vision Data Exchange Header File Version 1.0
+
+[Common Infos]
+Codepage=UTF-8
+DataFile=test.eeg
+DataFormat=BINARY
+DataOrientation=MULTIPLEXED
+NumberOfChannels=3
+SamplingInterval=1000
+
+[Binary Infos]
+BinaryFormat=INT_16
+
+[Channel Infos]
+Ch1=Fp1,,0.5,µV
+Ch2=Fp2,,0.5,µV
+"""
+    err = @test_throws ErrorException OndaVision._parse_vhdr(content)
+    @test occursin("NumberOfChannels is 3", err.value.msg)
+    @test occursin("2 channel entries were found", err.value.msg)
+end
+
+@testset "non-consecutive channel numbers" begin
+    # Ch2 is skipped; Ch3 is present instead
+    content = """
+Brain Vision Data Exchange Header File Version 1.0
+
+[Common Infos]
+Codepage=UTF-8
+DataFile=test.eeg
+DataFormat=BINARY
+DataOrientation=MULTIPLEXED
+NumberOfChannels=2
+SamplingInterval=1000
+
+[Binary Infos]
+BinaryFormat=INT_16
+
+[Channel Infos]
+Ch1=Fp1,,0.5,µV
+Ch3=Fp2,,0.5,µV
+"""
+    err = @test_throws ErrorException OndaVision._parse_vhdr(content)
+    @test occursin("Ch2", err.value.msg)
+    @test occursin("missing", err.value.msg)
+end
+
+@testset "coordinates count mismatch" begin
+    # 2 channels but only 1 coordinate entry
+    content = """
+Brain Vision Data Exchange Header File Version 1.0
+
+[Common Infos]
+Codepage=UTF-8
+DataFile=test.eeg
+DataFormat=BINARY
+DataOrientation=MULTIPLEXED
+NumberOfChannels=2
+SamplingInterval=1000
+
+[Binary Infos]
+BinaryFormat=INT_16
+
+[Channel Infos]
+Ch1=Fp1,,0.5,µV
+Ch2=Fp2,,0.5,µV
+
+[Coordinates]
+Ch1=1,0,0
+"""
+    err = @test_throws ErrorException OndaVision._parse_vhdr(content)
+    @test occursin("Coordinates", err.value.msg)
+    @test occursin("2", err.value.msg)
+    @test occursin("1 coordinate entry was found", err.value.msg)
+end
+
+@testset "invalid NumberOfChannels value" begin
+    content = """
+Brain Vision Data Exchange Header File Version 1.0
+
+[Common Infos]
+Codepage=UTF-8
+DataFile=test.eeg
+DataFormat=BINARY
+DataOrientation=MULTIPLEXED
+NumberOfChannels=abc
+SamplingInterval=1000
+
+[Binary Infos]
+BinaryFormat=INT_16
+
+[Channel Infos]
+Ch1=Fp1,,0.5,µV
+"""
+    err = @test_throws ErrorException OndaVision._parse_vhdr(content)
+    @test occursin("abc", err.value.msg)
+    @test occursin("NumberOfChannels", err.value.msg)
+end
+
+@testset "missing Codepage warns but does not error" begin
+    content = """
+Brain Vision Data Exchange Header File Version 1.0
+
+[Common Infos]
+DataFile=test.eeg
+DataFormat=BINARY
+DataOrientation=MULTIPLEXED
+NumberOfChannels=1
+SamplingInterval=1000
+
+[Binary Infos]
+BinaryFormat=INT_16
+
+[Channel Infos]
+Ch1=Fp1,,0.5,µV
+"""
+    result = @test_warn r"Codepage" OndaVision._parse_vhdr(content)
+    @test haskey(result, "Common Infos")
 end
