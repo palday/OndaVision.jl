@@ -43,7 +43,7 @@ function read_vhdr(filename; kwargs...)
     end
 end
 
-function read_vhdr(io::IO; codepage::Union{AbstractString, Nothing}=nothing)
+function read_vhdr(io::IO; codepage::Union{AbstractString,Nothing}=nothing)
     bytes = read(io)
     cp = codepage === nothing ? _detect_codepage(bytes) : codepage
     content = cp == "UTF-8" ? String(copy(bytes)) : _latin1_to_utf8(bytes)
@@ -84,7 +84,7 @@ end
 
 # Parse a decoded (UTF-8) VHDR string into a nested Dict.
 function _parse_vhdr(content::String)
-    result = Dict{String, Any}()
+    result = Dict{String,Any}()
 
     # Split on any line ending (CRLF or LF)
     lines = split(content, r"\r?\n")
@@ -118,7 +118,7 @@ function _parse_vhdr(content::String)
                 if current_section == "Comment"
                     in_comment = true
                 else
-                    result[current_section] = Dict{String, String}()
+                    result[current_section] = Dict{String,String}()
                 end
             end
             continue
