@@ -341,6 +341,85 @@ Ch1=Fp1,,0.5,µV
     @test occursin("NumberOfChannels", err.value.msg)
 end
 
+@testset "parse_amplifier_setup — no amplifier section" begin
+    @test parse_amplifier_setup("") === nothing
+    @test parse_amplifier_setup("Some free-form comment with no amplifier block") === nothing
+    # A file without a Comment section at all
+    d = read_vhdr(vhdr("testv2.vhdr"))
+    @test !haskey(d, "Comment")
+end
+
+@testset "parse_amplifier_setup — info dict (full format)" begin
+    d = read_vhdr(vhdr("test.vhdr"))
+    result = parse_amplifier_setup(d["Comment"])
+    @test result !== nothing
+    info, _ = result
+    @test info isa Dict{String,String}
+    @test info["Number of channels"] == "32"
+    @test info["Sampling Rate [Hz]"] == "1000"
+    @test info["Sampling Interval [µS]"] == "1000"
+end
+
+@testset "parse_amplifier_setup — channel table structure" begin
+    d = read_vhdr(vhdr("test.vhdr"))
+    _, channels = parse_amplifier_setup(d["Comment"])
+    @test channels isa NamedTuple
+    @test hasproperty(channels, :number)
+    @test hasproperty(channels, :name)
+    @test hasproperty(channels, :phys_chn)
+    @test hasproperty(channels, :resolution)
+    @test hasproperty(channels, :low_cutoff)
+    @test hasproperty(channels, :high_cutoff)
+    @test hasproperty(channels, :notch)
+    # Each column is a Vector{String} with one entry per channel
+    @test length(channels.number) == 32
+    @test channels.number isa Vector{String}
+end
+
+@testset "parse_amplifier_setup — channel table values (full format)" begin
+    d = read_vhdr(vhdr("test.vhdr"))
+    _, ch = parse_amplifier_setup(d["Comment"])
+    # First channel
+    @test ch.number[1] == "1"
+    @test ch.name[1] == "FP1"
+    @test ch.phys_chn[1] == "1"
+    @test ch.resolution[1] == "0.5 µV"
+    @test ch.low_cutoff[1] == "DC"
+    @test ch.high_cutoff[1] == "250"
+    @test ch.notch[1] == "Off"
+    # Last channel
+    @test ch.number[32] == "32"
+    @test ch.name[32] == "ReRef"
+end
+
+@testset "parse_amplifier_setup — old format (7-column header)" begin
+    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    result = parse_amplifier_setup(d["Comment"])
+    @test result !== nothing
+    info, ch = result
+    @test info["Number of channels"] == "29"
+    @test info["Sampling Rate [Hz]"] == "250"
+    @test length(ch.number) == 29
+    @test ch.name[1] == "F7"
+    # Old format resolution column contains only the numeric value, no unit
+    @test ch.resolution[1] == "0.1"
+    @test ch.low_cutoff[1] == "10"
+    @test ch.high_cutoff[1] == "1000"
+    @test ch.notch[1] == "Off"
+end
+
+@testset "parse_amplifier_setup — channel name with spaces" begin
+    # Old-layout file where Ch2 is named "F3 3 part" (internal spaces)
+    d = read_vhdr(vhdr("test_old_layout_latin1_software_filter_longname.vhdr"))
+    _, ch = parse_amplifier_setup(d["Comment"])
+    @test ch.name[2] == "F3 3 part"
+
+    # Full-format file where Ch28 is named "CP 6" (internal space)
+    d2 = read_vhdr(vhdr("test_mixed_lowpass.vhdr"))
+    _, ch2 = parse_amplifier_setup(d2["Comment"])
+    @test ch2.name[28] == "CP 6"
+end
+
 @testset "missing Codepage warns but does not error" begin
     content = """
 Brain Vision Data Exchange Header File Version 1.0

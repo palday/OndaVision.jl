@@ -2,7 +2,7 @@ module OndaVision
 
 using Onda
 
-export read_vhdr
+export read_vhdr, parse_amplifier_setup
 
 greet() = print("Hello World!")
 
@@ -232,6 +232,70 @@ function _validate_vhdr(result::Dict{String,Any})
     end
 
     return nothing
+end
+
+# Column names for the Amplifier Setup channel table (fixed, position-based).
+const _AMP_CHANNEL_COLS = (:number, :name, :phys_chn, :resolution, :low_cutoff,
+                           :high_cutoff, :notch)
+
+"""
+    parse_amplifier_setup(comment::String) -> (info, channels) or nothing
+
+Parse the "Amplifier Setup" sub-section from a VHDR `[Comment]` string.
+
+Returns `nothing` if no amplifier setup section is found in `comment`.
+
+Otherwise returns a 2-tuple `(info, channels)` where:
+
+- `info` is a `Dict{String,String}` containing the three header key-value pairs,
+  typically `"Number of channels"`, `"Sampling Rate [Hz]"`, and
+  `"Sampling Interval [µS]"`.
+
+- `channels` is a Tables.jl-compatible `NamedTuple` column table whose columns
+  are `Vector{String}` with names `number`, `name`, `phys_chn`, `resolution`,
+  `low_cutoff`, `high_cutoff`, `notch`.  Each row corresponds to one channel
+  in the amplifier channel table.
+"""
+function parse_amplifier_setup(comment::String)
+    lines = split(comment, r"\r?\n")
+
+    # Locate the "A m p l i f i e r  S e t u p" banner line.
+    amp_idx = findfirst(l -> startswith(strip(l), "A m p l i f i e r"), lines)
+    amp_idx === nothing && return nothing
+
+    # Parse the three info key-value lines.  They follow the "====" separator.
+    info = Dict{String,String}()
+    i = amp_idx + 2  # skip the banner line and the "====" separator
+    while i <= length(lines)
+        l = strip(lines[i])
+        isempty(l) && break
+        m = match(r"^(.+?)\s*:\s*(.+)$", l)
+        m !== nothing && (info[String(m[1])] = String(m[2]))
+        i += 1
+    end
+
+    # Find the channel-table header line (first line starting with "#").
+    hash_idx = findnext(l -> startswith(strip(l), "#"), lines, amp_idx + 1)
+    hash_idx === nothing && return (info, nothing)
+
+    # Parse channel data rows.  Each row starts with a digit (the channel number).
+    # Columns are separated by 2+ spaces in both the header and data rows; splitting
+    # on that pattern gives the first 7 semantically stable columns regardless of
+    # whether the file uses the 7-column or the extended 10-column header variant.
+    cols = ntuple(_ -> String[], 7)
+    row_idx = hash_idx + 1
+    while row_idx <= length(lines)
+        l = strip(lines[row_idx])
+        row_idx += 1
+        (isempty(l) || !isdigit(first(l))) && break
+        tokens = split(l, r"  +")
+        for col in 1:7
+            push!(cols[col], col <= length(tokens) ? String(strip(tokens[col])) : "")
+        end
+    end
+
+    channels = NamedTuple{_AMP_CHANNEL_COLS}(cols)
+    return (info, channels)
 end
 
 end # module OndaVision
