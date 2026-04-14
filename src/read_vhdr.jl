@@ -1,17 +1,55 @@
-# Matches both the canonical form ("BrainVision") and the legacy form ("Brain Vision").
+"""
+    _IDENTIFICATION_RE
+
+Regular expression that matches the mandatory first line of a VHDR file.
+Accepts both the canonical spelling `"BrainVision"` and the legacy form
+`"Brain Vision"`.
+"""
 const _IDENTIFICATION_RE = r"^Brain ?Vision Data Exchange Header File Version \d+\.\d+"
 
-# Keys that the spec marks as mandatory in their respective sections.
+"""
+    _REQUIRED_COMMON_INFOS_KEYS
+
+Keys that the BVCDF 1.0 specification marks as mandatory in the `[Common Infos]`
+section of a VHDR file.
+"""
 const _REQUIRED_COMMON_INFOS_KEYS = ("DataFile", "DataFormat", "DataOrientation",
                                      "NumberOfChannels", "SamplingInterval")
+
+"""
+    _REQUIRED_BINARY_INFOS_KEYS
+
+Keys that the BVCDF 1.0 specification marks as mandatory in the `[Binary Infos]`
+section of a VHDR file.
+"""
 const _REQUIRED_BINARY_INFOS_KEYS = ("BinaryFormat",)
 
-# Column names for the Amplifier Setup channel table (fixed, position-based).
+"""
+    _AMP_CHANNEL_COLS
+
+Column names for the Amplifier Setup channel table parsed by
+[`parse_amplifier_setup`](@ref).  Columns are position-based (fixed order):
+`number`, `name`, `phys_chn`, `resolution`, `low_cutoff`, `high_cutoff`, `notch`.
+"""
 const _AMP_CHANNEL_COLS = (:number, :name, :phys_chn, :resolution, :low_cutoff,
                            :high_cutoff, :notch)
 
-# Column names for the Software Filters table, without and with channel names.
+"""
+    _SW_FILTER_COLS_BASE
+
+Column names for the Software Filters table returned by
+[`parse_software_filters`](@ref) when no matching Amplifier Setup channel names
+are available: `number`, `low_cutoff`, `high_cutoff`, `notch`.
+"""
 const _SW_FILTER_COLS_BASE = (:number, :low_cutoff, :high_cutoff, :notch)
+
+"""
+    _SW_FILTER_COLS_WITH_NAMES
+
+Column names for the Software Filters table returned by
+[`parse_software_filters`](@ref) when channel names from the Amplifier Setup
+section are available: `number`, `name`, `low_cutoff`, `high_cutoff`, `notch`.
+"""
 const _SW_FILTER_COLS_WITH_NAMES = (:number, :name, :low_cutoff, :high_cutoff, :notch)
 
 """
@@ -63,8 +101,16 @@ function read_vhdr(io::IO; codepage::Union{AbstractString,Nothing}=nothing)
     return _parse_vhdr(content)
 end
 
-# Parse a decoded (UTF-8) VHDR string into a nested Dict, validating structural
-# requirements from the BVCDF 1.0 specification along the way.
+"""
+    _parse_vhdr(content) -> Dict{String,Any}
+
+Parse a decoded (UTF-8) VHDR string into a nested `Dict`, validating
+structural requirements from the BVCDF 1.0 specification along the way.
+
+The identification line is stored under `"identification"`.  Each INI
+section becomes a `Dict{String,String}` keyed by section name, except
+`[Comment]` which is stored as a raw `String`.
+"""
 function _parse_vhdr(content::String)
     result = Dict{String,Any}()
 
@@ -130,7 +176,15 @@ function _parse_vhdr(content::String)
     return result
 end
 
-# Post-parse structural validation: checks the requirements stated in the BVCDF 1.0 spec.
+"""
+    _validate_vhdr(result)
+
+Post-parse structural validation for a parsed VHDR `Dict`.  Checks that
+all mandatory sections and keys required by the BVCDF 1.0 specification are
+present, that `NumberOfChannels` is a positive integer, and that the
+`[Channel Infos]` section contains exactly the expected `Ch1`…`ChN` entries.
+Errors on any violation; warns (rather than errors) if `Codepage` is absent.
+"""
 function _validate_vhdr(result::Dict{String,Any})
     # --- Mandatory sections ---
     for section in ("Common Infos", "Binary Infos", "Channel Infos")

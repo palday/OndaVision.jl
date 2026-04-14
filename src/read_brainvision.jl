@@ -145,9 +145,15 @@ end
 # Private helpers
 # ---------------------------------------------------------------------------
 
-# Parse the resolution factor from each Ch<N> entry in [Channel Infos].
-# Format: <name>,<ref>,<resolution>[,<unit>][,...]
-# Missing or empty resolution → defaults to 1.0.
+"""
+    _parse_resolutions(ch_info, n_channels) -> Vector{Float64}
+
+Parse the per-channel resolution factor from each `Ch<N>` entry in the
+`[Channel Infos]` dictionary.
+
+Each entry has the form `<name>,<ref>,<resolution>[,<unit>][,...]`.
+A missing or empty resolution field defaults to `1.0`.
+"""
 function _parse_resolutions(ch_info::Dict{String,String}, n_channels::Int)
     resolutions = Vector{Float64}(undef, n_channels)
     for i in 1:n_channels
@@ -159,8 +165,13 @@ function _parse_resolutions(ch_info::Dict{String,String}, n_channels::Int)
     return resolutions
 end
 
-# Cross-check shared fields between the VHDR and VMRK Common Infos sections.
-# Inconsistencies trigger a @warn; VHDR values take precedence.
+"""
+    _check_vhdr_vmrk_consistency(vhdr_ci, vmrk_ci)
+
+Cross-check shared fields between the VHDR and VMRK `[Common Infos]`
+dictionaries.  Emits a `@warn` for each inconsistency (`DataFile` mismatch,
+`Codepage` mismatch); VHDR values take precedence in all cases.
+"""
 function _check_vhdr_vmrk_consistency(vhdr_ci::Dict{String,String},
                                       vmrk_ci::Dict{String,String})
     vhdr_df = vhdr_ci["DataFile"]
@@ -180,8 +191,13 @@ function _check_vhdr_vmrk_consistency(vhdr_ci::Dict{String,String},
     return nothing
 end
 
-# Build an (n_channels × seg_len × n_segs) 3-D array from contiguous slices of data.
-# Assumes all segment lengths are equal (caller must verify).
+"""
+    _make_3d(data, starts, ends, seg_len, n_segs) -> Array{Float64,3}
+
+Build an `(n_channels × seg_len × n_segs)` 3-D array by copying contiguous
+column slices from `data`.  All segment lengths must be equal (the caller is
+responsible for verifying this before calling).
+"""
 function _make_3d(data::Matrix{Float64},
                   starts::Vector{Int}, ends::Vector{Int},
                   seg_len::Int, n_segs::Int)
@@ -193,7 +209,13 @@ function _make_3d(data::Matrix{Float64},
     return result
 end
 
-# Return a Vector of 2-D matrices, one per segment (for unequal-length segments).
+"""
+    _split_segments(data, starts, ends, n_segs) -> Vector{Matrix{Float64}}
+
+Return a `Vector` of 2-D matrices, one per segment, by slicing columns
+`starts[s]:ends[s]` from `data` for each segment index `s`.  Used when
+segment lengths are unequal and a 3-D array cannot be formed.
+"""
 function _split_segments(data::Matrix{Float64},
                          starts::Vector{Int}, ends::Vector{Int},
                          n_segs::Int)

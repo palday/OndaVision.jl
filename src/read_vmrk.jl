@@ -1,11 +1,27 @@
-# Matches both the canonical form ("BrainVision") and all legacy forms ("Brain Vision",
-# with or without a comma before "Version").
+"""
+    _VMRK_IDENTIFICATION_RE
+
+Regular expression that matches the mandatory first line of a VMRK file.
+Accepts the canonical spelling `"BrainVision"`, the legacy form `"Brain Vision"`,
+and variants with or without a comma before `"Version"`.
+"""
 const _VMRK_IDENTIFICATION_RE = r"^Brain ?Vision Data Exchange Marker File,? Version \d+\.\d+"
 
-# Mandatory key in the [Common Infos] section of a VMRK file.
+"""
+    _REQUIRED_VMRK_COMMON_INFOS_KEYS
+
+Keys that the BVCDF 1.0 specification marks as mandatory in the `[Common Infos]`
+section of a VMRK file.
+"""
 const _REQUIRED_VMRK_COMMON_INFOS_KEYS = ("DataFile",)
 
-# Column names for the Marker Infos table.
+"""
+    _MARKER_COLS
+
+Column names for the `[Marker Infos]` table parsed by `read_vmrk` and
+filtered by [`get_segments`](@ref):
+`type`, `description`, `position`, `points`, `channel`, `date`.
+"""
 const _MARKER_COLS = (:type, :description, :position, :points, :channel, :date)
 
 """
@@ -60,8 +76,17 @@ function read_vmrk(io::IO; codepage::Union{AbstractString,Nothing}=nothing)
     return _parse_vmrk(content)
 end
 
-# Parse a decoded (UTF-8) VMRK string into a nested Dict, validating structural
-# requirements from the BVCDF 1.0 specification along the way.
+"""
+    _parse_vmrk(content) -> Dict{String,Any}
+
+Parse a decoded (UTF-8) VMRK string into a nested `Dict`, validating
+structural requirements from the BVCDF 1.0 specification along the way.
+
+The identification line is stored under `"identification"`.  `[Common Infos]`
+becomes a `Dict{String,String}`.  `[Marker Infos]` is parsed into a typed
+`NamedTuple` column table via [`_parse_marker_infos`](@ref).  Any additional
+sections are passed through as `Dict{String,String}`.
+"""
 function _parse_vmrk(content::String)
     result = Dict{String,Any}()
 
@@ -120,7 +145,14 @@ function _parse_vmrk(content::String)
     return result
 end
 
-# Post-parse structural validation for VMRK files.
+"""
+    _validate_vmrk(raw_sections)
+
+Post-parse structural validation for a parsed VMRK file.  Checks that
+`[Common Infos]` and `[Marker Infos]` sections are present and that all
+mandatory `[Common Infos]` keys exist.  Warns (rather than errors) if
+`Codepage` is absent.
+"""
 function _validate_vmrk(raw_sections::Dict{String,Dict{String,String}})
     # --- Mandatory sections ---
     for section in ("Common Infos", "Marker Infos")
@@ -144,9 +176,16 @@ function _validate_vmrk(raw_sections::Dict{String,Dict{String,String}})
     return nothing
 end
 
-# Parse the [Marker Infos] raw key=value entries into a typed NamedTuple table.
-# Each entry has the form:
-#   Mk<N>=<type>,<description>,<position>,<points>,<channel>[,<date>]
+"""
+    _parse_marker_infos(entries) -> NamedTuple
+
+Parse the raw `Dict{String,String}` of `[Marker Infos]` key-value pairs
+into a typed `NamedTuple` column table with columns matching `_MARKER_COLS`.
+
+Each entry has the form `Mk<N>=<type>,<description>,<position>,<points>,<channel>[,<date>]`.
+Validates that keys form the consecutive sequence `Mk1`…`MkN` and that all
+integer fields are valid; the optional `date` field becomes `missing` when absent.
+"""
 function _parse_marker_infos(entries::Dict{String,String})
     n = length(entries)
 

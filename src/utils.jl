@@ -1,7 +1,17 @@
+"""
+    _SUPPORTED_CODEPAGES
+
+Character encodings accepted by the `codepage` keyword argument of `read_vhdr`
+and `read_vmrk`.  Currently `("UTF-8", "Latin-1")`.
+"""
 const _SUPPORTED_CODEPAGES = ("UTF-8", "Latin-1")
 
-# Scan the raw bytes for "Codepage=" (all ASCII, safe for any encoding).
-# Returns the codepage value if found, or "Latin-1" as fallback.
+"""
+    _detect_codepage(bytes) -> String
+
+Scan raw file bytes for a `Codepage=` key (all-ASCII, safe for any encoding)
+and return its value.  Falls back to `"Latin-1"` when the key is absent.
+"""
 function _detect_codepage(bytes::Vector{UInt8})
     pattern = b"Codepage="
     idx = findfirst(pattern, bytes)
@@ -16,7 +26,15 @@ function _detect_codepage(bytes::Vector{UInt8})
     return strip(value)
 end
 
-# Convert Latin-1 (ISO-8859-1) bytes to a UTF-8 Julia String.
+"""
+    _latin1_to_utf8(bytes) -> String
+
+Convert a Latin-1 (ISO-8859-1) encoded byte vector to a UTF-8 `String`.
+
+Each byte value in `0x80..0xFF` is mapped to the corresponding Unicode code
+point `U+0080..U+00FF` (the Latin-1 Supplement block) and encoded as two
+UTF-8 bytes.  Bytes below `0x80` are passed through unchanged.
+"""
 function _latin1_to_utf8(bytes::Vector{UInt8})
     buf = IOBuffer()
     for b in bytes
