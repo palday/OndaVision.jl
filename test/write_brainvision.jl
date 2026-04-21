@@ -1,4 +1,4 @@
-@testset "write_brainvision_onda" begin
+@testset "write_brainvision" begin
     # --- Test 1: Roundtrip INT_16 MULTIPLEXED with annotations and metadata ---
     @testset "roundtrip INT_16 MULTIPLEXED with metadata and annotations" begin
         vhdr_in = "data/test.vhdr"
@@ -10,7 +10,7 @@
         # Write to temporary location
         tmpdir = mktempdir()
         out_path = joinpath(tmpdir, "roundtrip")
-        vhdr_out = write_brainvision_onda(out_path, signals_in; annotations=annotations_in,
+        vhdr_out = write_brainvision(out_path, signals_in; annotations=annotations_in,
                                           metadata=metadata_in)
 
         # Verify file was created
@@ -80,7 +80,7 @@
         # Write to temporary location
         tmpdir = mktempdir()
         out_path = joinpath(tmpdir, "roundtrip_float")
-        vhdr_out = write_brainvision_onda(out_path, signals_in; annotations=annotations_in,
+        vhdr_out = write_brainvision(out_path, signals_in; annotations=annotations_in,
                                           metadata=metadata_in)
 
         # Verify file was created
@@ -119,7 +119,7 @@
 
         tmpdir = mktempdir()
         out_path = joinpath(tmpdir, "no_markers")
-        vhdr_out = write_brainvision_onda(out_path, signals_in; metadata=metadata_in)
+        vhdr_out = write_brainvision(out_path, signals_in; metadata=metadata_in)
 
         # Verify VMRK file was NOT created
         @test !isfile(replace(vhdr_out, ".vhdr" => ".vmrk"))
@@ -140,7 +140,7 @@
 
         tmpdir = mktempdir()
         out_path = joinpath(tmpdir, "no_metadata")
-        vhdr_out = write_brainvision_onda(out_path, signals_in; annotations=annotations_in)
+        vhdr_out = write_brainvision(out_path, signals_in; annotations=annotations_in)
 
         # Read back and verify
         (signals_out, _, metadata_out) = read_brainvision_onda(vhdr_out)
@@ -159,21 +159,21 @@
 
         # Pass path with .vhdr extension
         out_path_1 = joinpath(tmpdir, "with_ext.vhdr")
-        vhdr_out_1 = write_brainvision_onda(out_path_1, signals_in;
+        vhdr_out_1 = write_brainvision(out_path_1, signals_in;
                                             annotations=annotations_in,
                                             metadata=metadata_in)
         @test vhdr_out_1 == joinpath(tmpdir, "with_ext.vhdr")
 
         # Pass path with .eeg extension
         out_path_2 = joinpath(tmpdir, "with_ext2.eeg")
-        vhdr_out_2 = write_brainvision_onda(out_path_2, signals_in;
+        vhdr_out_2 = write_brainvision(out_path_2, signals_in;
                                             annotations=annotations_in,
                                             metadata=metadata_in)
         @test vhdr_out_2 == joinpath(tmpdir, "with_ext2.vhdr")
 
         # Pass path without extension
         out_path_3 = joinpath(tmpdir, "no_ext")
-        vhdr_out_3 = write_brainvision_onda(out_path_3, signals_in;
+        vhdr_out_3 = write_brainvision(out_path_3, signals_in;
                                             annotations=annotations_in,
                                             metadata=metadata_in)
         @test vhdr_out_3 == joinpath(tmpdir, "no_ext.vhdr")

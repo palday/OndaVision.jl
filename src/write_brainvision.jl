@@ -269,7 +269,7 @@ end
 # ---------------------------------------------------------------------------
 
 """
-    write_brainvision_onda(base_path, signals; annotations=nothing, metadata=nothing)
+    write_brainvision(base_path, signals; annotations=nothing, metadata=nothing)
 
 Write Onda signals and optional annotations to a BrainVision recording.
 
@@ -296,7 +296,7 @@ The path to the written `.vhdr` file as a `String`.
 - All signals must have the same `sample_rate` and `sample_type`.
 - All signals must describe the same time span.
 """
-function write_brainvision_onda(base_path, signals::AbstractVector;
+function write_brainvision(base_path, signals::AbstractVector;
                                 annotations=nothing,
                                 metadata::Union{BrainVisionMetadata,Nothing}=nothing)
     # --- Validate early ---
