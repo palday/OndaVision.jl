@@ -8,3 +8,4 @@ end
 @testset "read_vmrk" include("read_vmrk.jl")
 @testset "read_brainvision" include("read_brainvision.jl")
 @testset "signal" include("signal.jl")
+@testset "annotations" include("annotations.jl")

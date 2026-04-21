@@ -9,6 +9,7 @@ export read_vhdr, parse_amplifier_setup, parse_software_filters, parse_impedance
 export read_vmrk, get_segments
 export read_brainvision
 export brainvision_to_signal
+export brainvision_annotations
 export VectorizedLPCMFormat
 export ChannelSubsetLPCMFormat
 
@@ -19,6 +20,7 @@ include("read_brainvision.jl")
 include("vectorized_lpcm.jl")
 include("channel_subset_lpcm.jl")
 include("signal.jl")
+include("annotations.jl")
 
 function __init__()
     _register_vectorized_lpcm_format!()

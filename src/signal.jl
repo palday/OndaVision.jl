@@ -45,27 +45,6 @@ function _normalize_bv_unit(unit::AbstractString)
 end
 
 """
-    _parse_channel_info(ch_info::Dict{String,String}, n_channels::Int)
-
-Parse channel names, resolutions, and units from the `[Channel Infos]` section.
-Returns `(names::Vector{String}, resolutions::Vector{Float64}, units::Vector{String})`.
-"""
-function _parse_channel_info(ch_info::Dict{String,String}, n_channels::Int)
-    names = Vector{String}(undef, n_channels)
-    resolutions = Vector{Float64}(undef, n_channels)
-    units = Vector{String}(undef, n_channels)
-    for i in 1:n_channels
-        entry = ch_info["Ch$i"]
-        parts = split(entry, ',')
-        names[i] = String(strip(parts[1]))
-        res_str = length(parts) >= 3 ? strip(parts[3]) : ""
-        resolutions[i] = isempty(res_str) ? 1.0 : parse(Float64, res_str)
-        units[i] = length(parts) >= 4 ? String(strip(parts[4])) : ""
-    end
-    return names, resolutions, units
-end
-
-"""
     brainvision_to_signal(vhdr_filename; codepage=nothing, recording=uuid4(),
                           sensor_type="eeg", sensor_label=sensor_type)
 
