@@ -10,3 +10,4 @@ end
 @testset "signal" include("signal.jl")
 @testset "annotations" include("annotations.jl")
 @testset "full_service" include("full_service.jl")
+@testset "write_brainvision" include("write_brainvision.jl")
