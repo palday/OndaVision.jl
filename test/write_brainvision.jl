@@ -11,7 +11,7 @@
         tmpdir = mktempdir()
         out_path = joinpath(tmpdir, "roundtrip")
         vhdr_out = write_brainvision(out_path, signals_in; annotations=annotations_in,
-                                          metadata=metadata_in)
+                                     metadata=metadata_in)
 
         # Verify file was created
         @test isfile(vhdr_out)
@@ -81,7 +81,7 @@
         tmpdir = mktempdir()
         out_path = joinpath(tmpdir, "roundtrip_float")
         vhdr_out = write_brainvision(out_path, signals_in; annotations=annotations_in,
-                                          metadata=metadata_in)
+                                     metadata=metadata_in)
 
         # Verify file was created
         @test isfile(vhdr_out)
@@ -160,22 +160,22 @@
         # Pass path with .vhdr extension
         out_path_1 = joinpath(tmpdir, "with_ext.vhdr")
         vhdr_out_1 = write_brainvision(out_path_1, signals_in;
-                                            annotations=annotations_in,
-                                            metadata=metadata_in)
+                                       annotations=annotations_in,
+                                       metadata=metadata_in)
         @test vhdr_out_1 == joinpath(tmpdir, "with_ext.vhdr")
 
         # Pass path with .eeg extension
         out_path_2 = joinpath(tmpdir, "with_ext2.eeg")
         vhdr_out_2 = write_brainvision(out_path_2, signals_in;
-                                            annotations=annotations_in,
-                                            metadata=metadata_in)
+                                       annotations=annotations_in,
+                                       metadata=metadata_in)
         @test vhdr_out_2 == joinpath(tmpdir, "with_ext2.vhdr")
 
         # Pass path without extension
         out_path_3 = joinpath(tmpdir, "no_ext")
         vhdr_out_3 = write_brainvision(out_path_3, signals_in;
-                                            annotations=annotations_in,
-                                            metadata=metadata_in)
+                                       annotations=annotations_in,
+                                       metadata=metadata_in)
         @test vhdr_out_3 == joinpath(tmpdir, "no_ext.vhdr")
 
         rm(tmpdir; recursive=true)

@@ -297,8 +297,8 @@ The path to the written `.vhdr` file as a `String`.
 - All signals must describe the same time span.
 """
 function write_brainvision(base_path, signals::AbstractVector;
-                                annotations=nothing,
-                                metadata::Union{BrainVisionMetadata,Nothing}=nothing)
+                           annotations=nothing,
+                           metadata::Union{BrainVisionMetadata,Nothing}=nothing)
     # --- Validate early ---
     isempty(signals) && error("signals vector cannot be empty")
     sample_rate = signals[1].sample_rate
