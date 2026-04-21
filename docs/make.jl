@@ -9,6 +9,8 @@ makedocs(;
          warnonly=[:cross_references],
          format=Documenter.HTML(; edit_link="main"),
          pages=["index.md",
+                "background.md",
+                "guide.md",
                 "api.md"])
 
 deploydocs(; repo="github.com/palday/OndaVision.jl.git",

@@ -30,3 +30,8 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Aqua", "PyMNE", "PythonCall", "Suppressor", "Test"]
+
+# The top-level Project.toml may already have other projects listed here as workspaces,
+# simply append "docs" to the end of the list if it already exists.
+[workspace]
+projects = ["docs"]
