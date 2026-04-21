@@ -9,3 +9,4 @@ end
 @testset "read_brainvision" include("read_brainvision.jl")
 @testset "signal" include("signal.jl")
 @testset "annotations" include("annotations.jl")
+@testset "full_service" include("full_service.jl")

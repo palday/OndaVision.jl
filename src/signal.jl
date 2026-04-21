@@ -76,6 +76,15 @@ function brainvision_to_signal(vhdr_filename;
                                sensor_type="eeg",
                                sensor_label=sensor_type)
     vhdr = read_vhdr(vhdr_filename; codepage)
+    vhdr_dir = dirname(abspath(vhdr_filename))
+    return brainvision_to_signal(vhdr; vhdr_dir, recording, sensor_type, sensor_label)
+end
+
+function brainvision_to_signal(vhdr::Dict{String,Any};
+                               vhdr_dir::String=".",
+                               recording=uuid4(),
+                               sensor_type="eeg",
+                               sensor_label=sensor_type)
     ci = vhdr["Common Infos"]
     bi = vhdr["Binary Infos"]
     ch = vhdr["Channel Infos"]
@@ -114,7 +123,6 @@ function brainvision_to_signal(vhdr_filename;
     sample_rate = 1e6 / sampling_interval_us
 
     # Resolve EEG data file path
-    vhdr_dir = dirname(abspath(vhdr_filename))
     eeg_file = joinpath(vhdr_dir, ci["DataFile"])
     isfile(eeg_file) ||
         error("EEG data file not found: \"$eeg_file\"")

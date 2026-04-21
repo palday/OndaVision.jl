@@ -10,6 +10,7 @@ export read_vmrk, get_segments
 export read_brainvision
 export brainvision_to_signal
 export brainvision_annotations
+export read_brainvision_onda, BrainVisionMetadata
 export VectorizedLPCMFormat
 export ChannelSubsetLPCMFormat
 
@@ -21,6 +22,7 @@ include("vectorized_lpcm.jl")
 include("channel_subset_lpcm.jl")
 include("signal.jl")
 include("annotations.jl")
+include("full_service.jl")
 
 function __init__()
     _register_vectorized_lpcm_format!()

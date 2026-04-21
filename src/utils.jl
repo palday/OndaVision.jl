@@ -48,6 +48,53 @@ function _parse_channel_info(ch_info::Dict{String,String}, n_channels::Int)
 end
 
 """
+    _parse_channel_references(ch_info::Dict{String,String}, n_channels::Int) -> Vector{String}
+
+Extract the reference-channel field (field 2) from each `Ch<N>` entry in the
+`[Channel Infos]` dictionary.  Returns an empty string for any channel whose
+reference field is absent or blank.
+"""
+function _parse_channel_references(ch_info::Dict{String,String}, n_channels::Int)
+    refs = Vector{String}(undef, n_channels)
+    for i in 1:n_channels
+        entry = ch_info["Ch$i"]
+        parts = split(entry, ',')
+        refs[i] = length(parts) >= 2 ? String(strip(parts[2])) : ""
+    end
+    return refs
+end
+
+"""
+    _parse_coordinates(coords, ch_info, n_channels) -> NamedTuple
+
+Parse the `[Coordinates]` section into a column table with fields
+`channel`, `radius`, `theta`, `phi`.  `coords` is the raw
+`Dict{String,String}` stored under `"Coordinates"` in the VHDR dict, or
+`nothing` when the section is absent.
+
+Returns a NamedTuple with zero-length vectors when the section is absent
+or empty, so callers can use `isempty(result.channel)` to detect absence
+without a `nothing` check.
+"""
+function _parse_coordinates(coords::Union{Nothing,Dict{String,String}},
+                            ch_info::Dict{String,String}, n_channels::Int)
+    if coords === nothing || isempty(coords)
+        return (; channel=String[], radius=Float64[], theta=Float64[], phi=Float64[])
+    end
+    names, _, _ = _parse_channel_info(ch_info, n_channels)
+    radii = Vector{Float64}(undef, n_channels)
+    thetas = Vector{Float64}(undef, n_channels)
+    phis = Vector{Float64}(undef, n_channels)
+    for i in 1:n_channels
+        parts = split(coords["Ch$i"], ',')
+        radii[i] = parse(Float64, strip(parts[1]))
+        thetas[i] = parse(Float64, strip(parts[2]))
+        phis[i] = parse(Float64, strip(parts[3]))
+    end
+    return (; channel=names, radius=radii, theta=thetas, phi=phis)
+end
+
+"""
     _latin1_to_utf8(bytes) -> String
 
 Convert a Latin-1 (ISO-8859-1) encoded byte vector to a UTF-8 `String`.
