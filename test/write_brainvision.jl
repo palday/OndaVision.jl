@@ -203,7 +203,8 @@
 
         (_, _, metadata_out) = @suppress read_brainvision_onda(vhdr_out)
         @test !isempty(metadata_out.coordinates.channel)
-        @test length(metadata_out.coordinates.channel) == length(metadata_in.coordinates.channel)
+        @test length(metadata_out.coordinates.channel) ==
+              length(metadata_in.coordinates.channel)
         @test metadata_out.coordinates.radius == metadata_in.coordinates.radius
         @test metadata_out.coordinates.theta == metadata_in.coordinates.theta
         @test metadata_out.coordinates.phi == metadata_in.coordinates.phi
