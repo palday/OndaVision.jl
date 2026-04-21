@@ -123,8 +123,8 @@ function read_brainvision_onda(vhdr_filename;
         (ann, dates)
     else
         empty_ann = (; recording=UUID[], id=UUID[], span=TimeSpan[],
-                       marker_type=String[], description=String[],
-                       channel=Union{String,Missing}[])
+                     marker_type=String[], description=String[],
+                     channel=Union{String,Missing}[])
         (empty_ann, Union{String,Missing}[])
     end
 
@@ -137,15 +137,17 @@ function read_brainvision_onda(vhdr_filename;
     else
         info, chans = amp_result
         ch_nt = chans === nothing ?
-            NamedTuple{_AMP_CHANNEL_COLS}(ntuple(_ -> String[], length(_AMP_CHANNEL_COLS))) :
-            chans
+                NamedTuple{_AMP_CHANNEL_COLS}(ntuple(_ -> String[],
+                                                     length(_AMP_CHANNEL_COLS))) :
+                chans
         (info, ch_nt)
     end
 
     sw_result = parse_software_filters(comment)
     sw_filters = sw_result === nothing ?
-        NamedTuple{_SW_FILTER_COLS_BASE}(ntuple(_ -> String[], length(_SW_FILTER_COLS_BASE))) :
-        sw_result
+                 NamedTuple{_SW_FILTER_COLS_BASE}(ntuple(_ -> String[],
+                                                         length(_SW_FILTER_COLS_BASE))) :
+                 sw_result
 
     imp_result = parse_impedances(comment)
     impedances = imp_result === nothing ? Dict{String,Union{Float64,Missing}}() : imp_result

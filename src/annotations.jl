@@ -39,8 +39,8 @@ schema (i.e. passes `Onda.validate_annotations`).  Columns:
     mapping from channel index to name.
 """
 function brainvision_annotations(vmrk::Dict{String,Any}, sample_rate::Real;
-                                  recording::UUID=uuid4(),
-                                  channel_names=nothing)
+                                 recording::UUID=uuid4(),
+                                 channel_names=nothing)
     markers = vmrk["Marker Infos"]
     n = length(markers.type)
     ids = [uuid4() for _ in 1:n]
@@ -58,17 +58,17 @@ function brainvision_annotations(vmrk::Dict{String,Any}, sample_rate::Real;
 end
 
 function brainvision_annotations(vmrk_filename, sample_rate::Real;
-                                  recording::UUID=uuid4(),
-                                  codepage=nothing,
-                                  channel_names=nothing)
+                                 recording::UUID=uuid4(),
+                                 codepage=nothing,
+                                 channel_names=nothing)
     vmrk = read_vmrk(vmrk_filename; codepage)
     return brainvision_annotations(vmrk, sample_rate; recording, channel_names)
 end
 
 function brainvision_annotations(vhdr_filename;
-                                  recording::UUID=uuid4(),
-                                  codepage=nothing,
-                                  channel_names=true)
+                                 recording::UUID=uuid4(),
+                                 codepage=nothing,
+                                 channel_names=true)
     vhdr = read_vhdr(vhdr_filename; codepage)
     ci = vhdr["Common Infos"]
     sample_rate = 1e6 / parse(Float64, ci["SamplingInterval"])
@@ -86,7 +86,8 @@ function brainvision_annotations(vhdr_filename;
     else
         channel_names
     end
-    return brainvision_annotations(vmrk, sample_rate; recording, channel_names=resolved_names)
+    return brainvision_annotations(vmrk, sample_rate; recording,
+                                   channel_names=resolved_names)
 end
 
 # ---------------------------------------------------------------------------

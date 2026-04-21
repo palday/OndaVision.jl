@@ -4,22 +4,20 @@
 Map of BrainVision unit strings to Onda-compatible lowercase snake_case unit names.
 Handles both U+00B5 (MICRO SIGN) and U+03BC (GREEK SMALL LETTER MU).
 """
-const _BRAINVISION_UNIT_MAP = Dict{String,String}(
-    "" => "microvolt",
-    "µV" => "microvolt",       # U+00B5
-    "μV" => "microvolt",       # U+03BC
-    "uV" => "microvolt",
-    "nV" => "nanovolt",
-    "mV" => "millivolt",
-    "V" => "volt",
-    "µS" => "microsiemens",    # U+00B5
-    "μS" => "microsiemens",    # U+03BC
-    "uS" => "microsiemens",
-    "S" => "siemens",
-    "C" => "celsius",
-    "µV/Hz" => "microvolt_per_hertz",
-    "μV/Hz" => "microvolt_per_hertz",
-)
+const _BRAINVISION_UNIT_MAP = Dict{String,String}("" => "microvolt",
+                                                  "µV" => "microvolt",       # U+00B5
+                                                  "μV" => "microvolt",       # U+03BC
+                                                  "uV" => "microvolt",
+                                                  "nV" => "nanovolt",
+                                                  "mV" => "millivolt",
+                                                  "V" => "volt",
+                                                  "µS" => "microsiemens",    # U+00B5
+                                                  "μS" => "microsiemens",    # U+03BC
+                                                  "uS" => "microsiemens",
+                                                  "S" => "siemens",
+                                                  "C" => "celsius",
+                                                  "µV/Hz" => "microvolt_per_hertz",
+                                                  "μV/Hz" => "microvolt_per_hertz")
 
 """
     _normalize_bv_unit(unit::AbstractString) -> String

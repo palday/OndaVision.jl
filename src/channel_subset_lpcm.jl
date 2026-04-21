@@ -52,7 +52,7 @@ function _register_channel_subset_lpcm_format!()
         base_format = m.captures[1]
         total_channels = parse(Int, m.captures[2])
         indices = parse.(Int, split(m.captures[3], ','))
-        return function(info; kwargs...)
+        return function (info; kwargs...)
             S = Onda.sample_type(info)
             inner = if base_format == "lpcm"
                 LPCMFormat(total_channels, S)

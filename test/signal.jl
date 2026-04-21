@@ -162,7 +162,7 @@ end
 
     # Find the microvolt group (0.5 resolution, channels 4-26)
     mv_signals = filter(s -> s.sample_unit == "microvolt" &&
-                             s.sample_resolution_in_unit == 0.5, signals)
+                            s.sample_resolution_in_unit == 0.5, signals)
     @test length(mv_signals) == 1
     @test length(mv_signals[1].channels) == 23
 

@@ -15,7 +15,8 @@ end
 @testset "signals match brainvision_to_signal" begin
     rec = uuid4()
     result = @suppress read_brainvision_onda(joinpath(DATA_DIR, "test.vhdr"); recording=rec)
-    expected = @suppress brainvision_to_signal(joinpath(DATA_DIR, "test.vhdr"); recording=rec)
+    expected = @suppress brainvision_to_signal(joinpath(DATA_DIR, "test.vhdr");
+                                               recording=rec)
     @test length(result.signals) == length(expected)
     for (s, e) in zip(result.signals, expected)
         @test s.file_path == e.file_path
@@ -32,7 +33,8 @@ end
 @testset "annotations match brainvision_annotations" begin
     rec = uuid4()
     result = read_brainvision_onda(joinpath(DATA_DIR, "test_highpass.vhdr"); recording=rec)
-    expected = brainvision_annotations(joinpath(DATA_DIR, "test_highpass.vhdr"); recording=rec)
+    expected = brainvision_annotations(joinpath(DATA_DIR, "test_highpass.vhdr");
+                                       recording=rec)
     @test result.annotations.recording == expected.recording
     @test result.annotations.span == expected.span
     @test result.annotations.marker_type == expected.marker_type
@@ -124,8 +126,8 @@ end
 end
 
 @testset "software filters active" begin
-    result = @suppress read_brainvision_onda(
-        joinpath(DATA_DIR, "test_old_layout_latin1_software_filter.vhdr"))
+    result = @suppress read_brainvision_onda(joinpath(DATA_DIR,
+                                                      "test_old_layout_latin1_software_filter.vhdr"))
     sw = result.metadata.software_filters
     @test sw isa NamedTuple
     @test !isempty(sw.number)
