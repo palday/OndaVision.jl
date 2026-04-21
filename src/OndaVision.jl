@@ -10,16 +10,19 @@ export read_vmrk, get_segments
 export read_brainvision
 export brainvision_to_signal
 export VectorizedLPCMFormat
+export ChannelSubsetLPCMFormat
 
 include("utils.jl")
 include("read_vhdr.jl")
 include("read_vmrk.jl")
 include("read_brainvision.jl")
 include("vectorized_lpcm.jl")
+include("channel_subset_lpcm.jl")
 include("signal.jl")
 
 function __init__()
     _register_vectorized_lpcm_format!()
+    _register_channel_subset_lpcm_format!()
     return nothing
 end
 

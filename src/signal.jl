@@ -69,11 +69,17 @@ end
     brainvision_to_signal(vhdr_filename; codepage=nothing, recording=uuid4(),
                           sensor_type="eeg", sensor_label=sensor_type)
 
-Read a BrainVision VHDR header file and return a `Vector{SignalV2}` with a
-single element pointing to the associated EEG binary data file.
+Read a BrainVision VHDR header file and return a `Vector{SignalV2}` pointing
+to the associated EEG binary data file.
 
-The returned `SignalV2` record contains all metadata needed for Onda to
-load the sample data on demand via `Onda.load`.
+When all channels share the same unit and resolution, a single `SignalV2` is
+returned with a standard `"lpcm"` or `"lpcm.vectorized"` file format.
+
+When channels differ in unit or resolution, they are grouped by
+`(unit, resolution)` and one `SignalV2` is returned per group.  Each group
+uses a [`ChannelSubsetLPCMFormat`](@ref)-backed file format string that
+encodes the total channel count and 1-based channel indices so that
+`Onda.load` can read the correct channels from the shared binary file.
 
 # Keyword arguments
 
@@ -82,12 +88,8 @@ load the sample data on demand via `Onda.load`.
 - `recording`: a `UUID` identifying the recording (default: random).
 - `sensor_type`: Onda sensor type string (default: `"eeg"`).
 - `sensor_label`: Onda sensor label string (default: same as `sensor_type`).
-
-# Limitations
-
-All channels must share the same resolution and unit.  If they differ, an
-error is thrown.  Mixed-modality recordings (e.g. EEG + EDA) are not yet
-supported via this function; use `read_brainvision` instead.
+  When multiple groups are produced, `"_\$(unit)"` is appended to
+  distinguish them.
 """
 function brainvision_to_signal(vhdr_filename;
                                codepage=nothing,
@@ -125,20 +127,8 @@ function brainvision_to_signal(vhdr_filename;
     # --- Parse channel info ---
     names, resolutions, units = _parse_channel_info(ch, n_channels)
 
-    # --- Validate uniform resolution and unit ---
-    if !all(==(resolutions[1]), resolutions)
-        error("all channels must have the same resolution for Onda Signal " *
-              "conversion, but found varying resolutions: " *
-              join(unique(resolutions), ", "))
-    end
-    if !all(==(units[1]), units)
-        error("all channels must have the same unit for Onda Signal " *
-              "conversion, but found varying units: " *
-              join(unique(units), ", "))
-    end
-
-    resolution = resolutions[1]
-    sample_unit = _normalize_bv_unit(units[1])
+    # Normalize units up front
+    normalized_units = [_normalize_bv_unit(u) for u in units]
 
     # --- Compute sample rate and file info ---
     sampling_interval_us = parse(Float64, ci["SamplingInterval"])
@@ -162,31 +152,49 @@ function brainvision_to_signal(vhdr_filename;
         error("total number of values ($n_values) in EEG data file is not " *
               "divisible by NumberOfChannels ($n_channels)")
 
-    # --- Determine file format ---
-    file_fmt = if data_orientation == "MULTIPLEXED"
-        "lpcm"
-    else
-        "lpcm.vectorized"
+    # --- Group channels by (normalized_unit, resolution) ---
+    groups = Dict{Tuple{String,Float64},Vector{Int}}()
+    for i in 1:n_channels
+        key = (normalized_units[i], resolutions[i])
+        push!(get!(Vector{Int}, groups, key), i)
     end
 
-    # --- Build SignalV2 ---
+    # --- Determine base file format ---
+    base_fmt = data_orientation == "MULTIPLEXED" ? "lpcm" : "lpcm.vectorized"
+
+    # --- Build one SignalV2 per group ---
     onda_sample_type = binary_format == "INT_16" ? "int16" : "float32"
-    channel_names = lowercase.(names)
     span = TimeSpan(Nanosecond(0),
                     TimeSpans.time_from_index(sample_rate, n_total_samples + 1))
+    multi_group = length(groups) > 1
 
-    signal = SignalV2(; recording,
-                      file_path=eeg_file,
-                      file_format=file_fmt,
-                      span,
-                      sensor_label,
-                      sensor_type,
-                      channels=channel_names,
-                      sample_unit,
-                      sample_resolution_in_unit=resolution,
-                      sample_offset_in_unit=0.0,
-                      sample_type=onda_sample_type,
-                      sample_rate)
+    signals = SignalV2[]
+    for ((unit, resolution), indices) in sort!(collect(groups))
+        channel_names = lowercase.(names[indices])
 
-    return SignalV2[signal]
+        file_fmt = if length(indices) == n_channels
+            base_fmt
+        else
+            idx_str = join(indices, ',')
+            "$(base_fmt).subset.$(n_channels).$(idx_str)"
+        end
+
+        label = multi_group ? "$(sensor_label)_$(unit)" : sensor_label
+
+        signal = SignalV2(; recording,
+                          file_path=eeg_file,
+                          file_format=file_fmt,
+                          span,
+                          sensor_label=label,
+                          sensor_type,
+                          channels=channel_names,
+                          sample_unit=unit,
+                          sample_resolution_in_unit=resolution,
+                          sample_offset_in_unit=0.0,
+                          sample_type=onda_sample_type,
+                          sample_rate)
+        push!(signals, signal)
+    end
+
+    return signals
 end
