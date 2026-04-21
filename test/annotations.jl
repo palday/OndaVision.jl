@@ -3,7 +3,8 @@ const _VHDR_FILE = joinpath(DATA_DIR, "test_highpass.vhdr")
 const _SAMPLE_RATE = 1000.0  # Hz (SamplingInterval=1000 µs)
 
 @testset "structure" begin
-    result = brainvision_annotations(read_vmrk(_VMRK_FILE), _SAMPLE_RATE)
+    result = @suppress brainvision_annotations(@suppress(read_vmrk(_VMRK_FILE)),
+                                               _SAMPLE_RATE)
     @test result isa NamedTuple
     @test hasproperty(result, :recording)
     @test hasproperty(result, :id)
@@ -17,13 +18,15 @@ const _SAMPLE_RATE = 1000.0  # Hz (SamplingInterval=1000 µs)
 end
 
 @testset "schema compliance" begin
-    result = brainvision_annotations(read_vmrk(_VMRK_FILE), _SAMPLE_RATE)
+    result = @suppress brainvision_annotations(@suppress(read_vmrk(_VMRK_FILE)),
+                                               _SAMPLE_RATE)
     @test_nowarn Onda.validate_annotations(result)
 end
 
 @testset "span - instantaneous (points == 0)" begin
     # Mk2: position=487, points=0 → single-sample span
-    result = brainvision_annotations(read_vmrk(_VMRK_FILE), _SAMPLE_RATE)
+    result = @suppress brainvision_annotations(@suppress(read_vmrk(_VMRK_FILE)),
+                                               _SAMPLE_RATE)
     @test result.marker_type[2] == "Stimulus"
     expected = TimeSpans.time_from_index(_SAMPLE_RATE, 487:487)
     @test result.span[2] == expected
@@ -31,7 +34,8 @@ end
 
 @testset "span - nonzero duration (points > 0)" begin
     # Mk3: position=497, points=1
-    result = brainvision_annotations(read_vmrk(_VMRK_FILE), _SAMPLE_RATE)
+    result = @suppress brainvision_annotations(@suppress(read_vmrk(_VMRK_FILE)),
+                                               _SAMPLE_RATE)
     expected = TimeSpans.time_from_index(_SAMPLE_RATE, 497:497)
     @test result.span[3] == expected
     # Mk1: position=1, points=1
@@ -40,7 +44,8 @@ end
 end
 
 @testset "column values" begin
-    result = brainvision_annotations(read_vmrk(_VMRK_FILE), _SAMPLE_RATE)
+    result = @suppress brainvision_annotations(@suppress(read_vmrk(_VMRK_FILE)),
+                                               _SAMPLE_RATE)
     @test result.marker_type[1] == "New Segment"
     @test result.marker_type[2] == "Stimulus"
     @test result.marker_type[10] == "Response"
@@ -53,18 +58,20 @@ end
 
 @testset "recording kwarg" begin
     rec = uuid4()
-    result = brainvision_annotations(read_vmrk(_VMRK_FILE), _SAMPLE_RATE; recording=rec)
+    result = @suppress brainvision_annotations(@suppress(read_vmrk(_VMRK_FILE)),
+                                               _SAMPLE_RATE; recording=rec)
     @test all(==(rec), result.recording)
 end
 
 @testset "unique annotation ids" begin
-    result = brainvision_annotations(read_vmrk(_VMRK_FILE), _SAMPLE_RATE)
+    result = @suppress brainvision_annotations(@suppress(read_vmrk(_VMRK_FILE)),
+                                               _SAMPLE_RATE)
     @test length(unique(result.id)) == 14
 end
 
 @testset "channel_names=nothing returns Vector{Int}" begin
-    result = brainvision_annotations(read_vmrk(_VMRK_FILE), _SAMPLE_RATE;
-                                     channel_names=nothing)
+    result = @suppress brainvision_annotations(@suppress(read_vmrk(_VMRK_FILE)),
+                                               _SAMPLE_RATE; channel_names=nothing)
     @test result.channel isa Vector{Int}
 end
 
@@ -81,9 +88,9 @@ DataFile=test.eeg
 Mk1=New Segment,,1,1,0
 Mk2=Stimulus,S1,100,1,3
 """
-    vmrk = read_vmrk(IOBuffer(content))
+    vmrk = @suppress read_vmrk(IOBuffer(content))
     ch_names = ["fp1", "fp2", "fz"]
-    result = brainvision_annotations(vmrk, _SAMPLE_RATE; channel_names=ch_names)
+    result = @suppress brainvision_annotations(vmrk, _SAMPLE_RATE; channel_names=ch_names)
     @test result.channel isa Vector{Union{String,Missing}}
     @test ismissing(result.channel[1])   # channel 0 → missing
     @test result.channel[2] == "fz"     # channel 3 → ch_names[3]
@@ -101,19 +108,19 @@ DataFile=test.eeg
 Mk1=Stimulus,S1,100,1,2
 Mk2=Response,R1,200,1,0
 """
-    vmrk = read_vmrk(IOBuffer(content))
+    vmrk = @suppress read_vmrk(IOBuffer(content))
     ch_dict = Dict(1 => "fp1", 2 => "fp2")
-    result = brainvision_annotations(vmrk, _SAMPLE_RATE; channel_names=ch_dict)
+    result = @suppress brainvision_annotations(vmrk, _SAMPLE_RATE; channel_names=ch_dict)
     @test result.channel isa Vector{Union{String,Missing}}
     @test result.channel[1] == "fp2"
     @test ismissing(result.channel[2])
 end
 
 @testset "method 2 (file-based) equals method 1 (dict-based)" begin
-    vmrk = read_vmrk(_VMRK_FILE)
+    vmrk = @suppress read_vmrk(_VMRK_FILE)
     rec = uuid4()
-    from_dict = brainvision_annotations(vmrk, _SAMPLE_RATE; recording=rec)
-    from_file = brainvision_annotations(_VMRK_FILE, _SAMPLE_RATE; recording=rec)
+    from_dict = @suppress brainvision_annotations(vmrk, _SAMPLE_RATE; recording=rec)
+    from_file = @suppress brainvision_annotations(_VMRK_FILE, _SAMPLE_RATE; recording=rec)
     # ids are random so exclude from comparison; check everything else
     @test from_dict.recording == from_file.recording
     @test from_dict.span == from_file.span
@@ -124,7 +131,7 @@ end
 
 @testset "method 3 (vhdr-based)" begin
     rec = uuid4()
-    result = brainvision_annotations(_VHDR_FILE; recording=rec)
+    result = @suppress brainvision_annotations(_VHDR_FILE; recording=rec)
     @test result isa NamedTuple
     @test length(result.span) == 14
     @test all(==(rec), result.recording)
@@ -133,14 +140,14 @@ end
     # channel 0 rows → missing
     @test all(ismissing, result.channel)
     # marker_type and spans match what method 2 would give
-    from_file = brainvision_annotations(_VMRK_FILE, _SAMPLE_RATE; recording=rec)
+    from_file = @suppress brainvision_annotations(_VMRK_FILE, _SAMPLE_RATE; recording=rec)
     @test result.span == from_file.span
     @test result.marker_type == from_file.marker_type
     @test result.description == from_file.description
 end
 
 @testset "method 3 - schema compliance" begin
-    result = brainvision_annotations(_VHDR_FILE)
+    result = @suppress brainvision_annotations(_VHDR_FILE)
     @test_nowarn Onda.validate_annotations(result)
 end
 
