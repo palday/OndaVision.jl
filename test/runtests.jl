@@ -8,6 +8,7 @@ end
 @testset "read_vmrk" include("read_vmrk.jl")
 @testset "read_brainvision" include("read_brainvision.jl")
 @testset "signal" include("signal.jl")
+@testset "vectorized_lpcm" include("vectorized_lpcm.jl")
 @testset "annotations" include("annotations.jl")
 @testset "full_service" include("full_service.jl")
 @testset "write_brainvision" include("write_brainvision.jl")

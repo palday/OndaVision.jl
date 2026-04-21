@@ -183,4 +183,111 @@
 
         rm(tmpdir; recursive=true)
     end
+
+    # --- Test 6: _julia_sample_type error on unsupported type ---
+    @testset "_julia_sample_type error" begin
+        @test_throws ErrorException OndaVision._julia_sample_type("float64")
+    end
+
+    # --- Test 7: Roundtrip preserves electrode coordinates ---
+    @testset "roundtrip preserves coordinates" begin
+        vhdr_in = "data/testv2.vhdr"
+        (signals_in, annotations_in, metadata_in) = @suppress read_brainvision_onda(vhdr_in)
+        @test !isempty(metadata_in.coordinates.channel)  # sanity: testv2 has coordinates
+
+        tmpdir = mktempdir()
+        out_path = joinpath(tmpdir, "roundtrip_coords")
+        vhdr_out = @suppress write_brainvision(out_path, signals_in;
+                                               annotations=annotations_in,
+                                               metadata=metadata_in)
+
+        (_, _, metadata_out) = @suppress read_brainvision_onda(vhdr_out)
+        @test !isempty(metadata_out.coordinates.channel)
+        @test length(metadata_out.coordinates.channel) == length(metadata_in.coordinates.channel)
+        @test metadata_out.coordinates.radius == metadata_in.coordinates.radius
+        @test metadata_out.coordinates.theta == metadata_in.coordinates.theta
+        @test metadata_out.coordinates.phi == metadata_in.coordinates.phi
+
+        rm(tmpdir; recursive=true)
+    end
+
+    # --- Test 8: Write [User Infos] and [Channel User Infos] sections ---
+    @testset "write user_infos and channel_user_infos" begin
+        vhdr_in = "data/test.vhdr"
+        (signals_in, _, meta_base) = @suppress read_brainvision_onda(vhdr_in)
+
+        meta = BrainVisionMetadata(meta_base.channel_names,
+                                   meta_base.channel_references,
+                                   meta_base.coordinates,
+                                   meta_base.amplifier_info,
+                                   meta_base.amplifier_channels,
+                                   meta_base.software_filters,
+                                   meta_base.impedances,
+                                   meta_base.comment,
+                                   Dict("Source" => "TestData"),
+                                   Dict("FP1" => "FrontalLeft"),
+                                   meta_base.marker_dates)
+
+        tmpdir = mktempdir()
+        out_path = joinpath(tmpdir, "with_infos")
+        vhdr_out = @suppress write_brainvision(out_path, signals_in; metadata=meta)
+
+        vhdr_dict = @suppress read_vhdr(vhdr_out)
+        @test haskey(vhdr_dict, "User Infos")
+        @test vhdr_dict["User Infos"]["Source"] == "TestData"
+        @test haskey(vhdr_dict, "Channel User Infos")
+        @test vhdr_dict["Channel User Infos"]["FP1"] == "FrontalLeft"
+
+        rm(tmpdir; recursive=true)
+    end
+
+    # --- Test 9: Annotations without initial New Segment, string channel, marker_dates ---
+    @testset "write annotations without initial New Segment" begin
+        vhdr_in = "data/test_highpass.vhdr"
+        (signals_in, _, meta_base) = @suppress read_brainvision_onda(vhdr_in)
+        sample_rate = signals_in[1].sample_rate
+        ch_names_lower = lowercase.(meta_base.channel_names)
+
+        # Annotations starting with Stimulus (not New Segment), string channel
+        ann = (; recording=fill(signals_in[1].recording, 1),
+               id=[uuid4()],
+               span=[TimeSpans.time_from_index(sample_rate, 100:100)],
+               marker_type=["Stimulus"],
+               description=["S1"],
+               channel=Union{String,Missing}[ch_names_lower[1]])
+
+        # marker_dates: index 1 for the synthetic New Segment, index 2 for the annotation
+        meta = BrainVisionMetadata(meta_base.channel_names,
+                                   meta_base.channel_references,
+                                   meta_base.coordinates,
+                                   meta_base.amplifier_info,
+                                   meta_base.amplifier_channels,
+                                   meta_base.software_filters,
+                                   meta_base.impedances,
+                                   meta_base.comment,
+                                   meta_base.user_infos,
+                                   meta_base.channel_user_infos,
+                                   Union{String,Missing}["20230101120000000000",
+                                                         "20230101120001000000"])
+
+        tmpdir = mktempdir()
+        out_path = joinpath(tmpdir, "no_seg")
+        vhdr_out = @suppress write_brainvision(out_path, signals_in;
+                                               annotations=ann,
+                                               metadata=meta)
+
+        vmrk = @suppress read_vmrk(replace(vhdr_out, ".vhdr" => ".vmrk"))
+        markers = vmrk["Marker Infos"]
+
+        # A synthetic New Segment is prepended with date from marker_dates[1]
+        @test markers.type[1] == "New Segment"
+        @test markers.date[1] == "20230101120000000000"
+
+        # Our Stimulus annotation follows with date from marker_dates[2]
+        @test markers.type[2] == "Stimulus"
+        @test markers.description[2] == "S1"
+        @test markers.date[2] == "20230101120001000000"
+
+        rm(tmpdir; recursive=true)
+    end
 end

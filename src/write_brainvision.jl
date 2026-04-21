@@ -145,14 +145,9 @@ function _write_vhdr(io::IO, base_name::AbstractString, signals::AbstractVector,
         println(io)
     end
 
-    # --- Write optional [Comment] section ---
-    if metadata !== nothing && !isempty(metadata.comment)
-        println(io, "[Comment]")
-        println(io, metadata.comment)
-        println(io)
-    end
-
     # --- Write optional [User Infos] section ---
+    # Must come before [Comment]: the parser treats everything after [Comment] as
+    # free-form text, so any section written after it is silently swallowed.
     if metadata !== nothing && !isempty(metadata.user_infos)
         println(io, "[User Infos]")
         for (key, value) in metadata.user_infos
@@ -167,6 +162,13 @@ function _write_vhdr(io::IO, base_name::AbstractString, signals::AbstractVector,
         for (key, value) in metadata.channel_user_infos
             println(io, "$key=$value")
         end
+        println(io)
+    end
+
+    # --- Write optional [Comment] section (must be last: parser is free-form after this) ---
+    if metadata !== nothing && !isempty(metadata.comment)
+        println(io, "[Comment]")
+        println(io, metadata.comment)
         println(io)
     end
 
