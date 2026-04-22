@@ -120,5 +120,5 @@ function _latin1_to_utf8(bytes::Vector{UInt8})
 end
 
 function _empty_column_table(names::Tuple, T::Type=String)
-  return NamedTuple{names}(T[] for _ in 1:length(names))
+    return NamedTuple{names}(T[] for _ in 1:length(names))
 end

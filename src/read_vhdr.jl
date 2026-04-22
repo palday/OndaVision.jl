@@ -288,7 +288,7 @@ function parse_amplifier_setup(comment::String)
         l = strip(lines[i])
         isempty(l) && break
         m = match(r"^(.+?)\s*:\s*(.+)$", l)
-        if !isnothing(m) 
+        if !isnothing(m)
             info[String(m[1])] = String(m[2])
         end
         i += 1
