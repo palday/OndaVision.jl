@@ -113,7 +113,7 @@ end
         end
     end
 end
->
+
 @testset "v2 extra sections" begin
     d = read_vhdr(vhdr("testv2.vhdr"))
     # User Infos and Channel User Infos exist but contain only ; comments
