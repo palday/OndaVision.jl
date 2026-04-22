@@ -119,7 +119,8 @@
 
         mktempdir() do tempdir
             out_path = joinpath(tempdir, "no_markers")
-            vhdr_out = @suppress write_brainvision(out_path, signals_in; metadata=metadata_in)
+            vhdr_out = @suppress write_brainvision(out_path, signals_in;
+                                                   metadata=metadata_in)
 
             # Verify VMRK file was NOT created
             @test !isfile(replace(vhdr_out, ".vhdr" => ".vmrk"))
