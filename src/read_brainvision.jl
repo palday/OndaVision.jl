@@ -119,9 +119,7 @@ function read_brainvision(vhdr_filename; codepage=nothing)
     data .*= resolutions
 
     # --- Segment dispatch ---
-    if vmrk === nothing
-        return data   # 2D, no marker file
-    end
+    isnothing(vmrk) && return data # 2D, no marker file
 
     segments = get_segments(vmrk)
     n_segs = length(segments.position)
@@ -131,7 +129,7 @@ function read_brainvision(vhdr_filename; codepage=nothing)
     # Compute per-segment boundaries (1-based sample indices).
     positions = segments.position
     starts = positions
-    ends = vcat(positions[2:end] .- 1, [n_total])
+    ends = vcat(@view(positions[2:end]) .- 1, [n_total])
     lengths = ends .- starts .+ 1
 
     if allequal(lengths)

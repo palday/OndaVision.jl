@@ -46,6 +46,7 @@ VHDR order, 1-based):
 """
 struct BrainVisionMetadata
     channel_names::Vector{String}
+    # TODO: use channel references when creating the Onda names for the relevant channels
     channel_references::Vector{String}
     coordinates::NamedTuple
     amplifier_info::Dict{String,String}
@@ -57,6 +58,8 @@ struct BrainVisionMetadata
     channel_user_infos::Dict{String,String}
     marker_dates::Vector{Union{String,Missing}}
 end
+
+# TODO handle oddity around BV specifying high-pass filters in seconds, see https://github.com/mne-tools/mne-python/issues/4998
 
 """
     read_brainvision_onda(vhdr_filename; codepage=nothing, recording=uuid4(),
@@ -116,7 +119,7 @@ function read_brainvision_onda(vhdr_filename;
     channel_names_orig, _, _ = _parse_channel_info(ch, n_channels)
     resolved_names = lowercase.(channel_names_orig)
 
-    annotations, marker_dates = if vmrk !== nothing
+    annotations, marker_dates = if !isnothing(vmrk)
         ann = brainvision_annotations(vmrk, sample_rate; recording,
                                       channel_names=resolved_names)
         dates = copy(vmrk["Marker Infos"].date)
@@ -131,26 +134,21 @@ function read_brainvision_onda(vhdr_filename;
     # --- Metadata ---
     comment = get(vhdr, "Comment", "")::String
     amp_result = parse_amplifier_setup(comment)
-    amp_info, amp_channels = if amp_result === nothing
+    amp_info, amp_channels = if isnothing(amp_result)
         (Dict{String,String}(),
-         NamedTuple{_AMP_CHANNEL_COLS}(ntuple(_ -> String[], length(_AMP_CHANNEL_COLS))))
+         _empty_column_table(_AMP_CHANNEL_COLS))
     else
         info, chans = amp_result
-        ch_nt = chans === nothing ?
-                NamedTuple{_AMP_CHANNEL_COLS}(ntuple(_ -> String[],
-                                                     length(_AMP_CHANNEL_COLS))) :
-                chans
+        ch_nt = @something(chans, _empty_column_table(_AMP_CHANNEL_COLS))
         (info, ch_nt)
     end
 
     sw_result = parse_software_filters(comment)
-    sw_filters = sw_result === nothing ?
-                 NamedTuple{_SW_FILTER_COLS_BASE}(ntuple(_ -> String[],
-                                                         length(_SW_FILTER_COLS_BASE))) :
-                 sw_result
+    sw_filters = @something(sw_result,
+                            _empty_column_table(_SW_FILTER_COLS_BASE))
 
     imp_result = parse_impedances(comment)
-    impedances = imp_result === nothing ? Dict{String,Union{Float64,Missing}}() : imp_result
+    impedances = @something(imp_result, Dict{String,Union{Float64,Missing}}())
 
     metadata = BrainVisionMetadata(channel_names_orig,
                                    _parse_channel_references(ch, n_channels),

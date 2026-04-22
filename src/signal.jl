@@ -92,6 +92,7 @@ function brainvision_to_signal(vhdr::Dict{String,Any};
     data_format == "BINARY" ||
         error("unsupported DataFormat \"$data_format\"; only \"BINARY\" is supported")
 
+    # TODO move some of these validation literals to constants
     data_orientation = ci["DataOrientation"]
     data_orientation in ("MULTIPLEXED", "VECTORIZED") ||
         error("unsupported DataOrientation \"$data_orientation\"; " *
@@ -126,6 +127,7 @@ function brainvision_to_signal(vhdr::Dict{String,Any};
         error("EEG data file not found: \"$eeg_file\"")
 
     # Compute total sample count from file size
+    # TODO check whether this validation code can be factored out to share with `read_brainvision`
     T = binary_format == "INT_16" ? Int16 : Float32
     eeg_size = filesize(eeg_file)
     n_values, rem = divrem(eeg_size, sizeof(T))

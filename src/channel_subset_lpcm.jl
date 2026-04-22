@@ -12,7 +12,7 @@ The `file_format` string encodes the base format, total channel count, and
 1-based channel indices so that `Onda.load` can reconstruct the format
 automatically.  For example:
 
-    "lpcm.subset.32.1,2,3"               # MULTIPLEXED, 32 total channels, indices 1-3
+    "lpcm.subset.32.1,2,3"                # MULTIPLEXED, 32 total channels, indices 1-3
     "lpcm.vectorized.subset.32.27,28"     # VECTORIZED, 32 total channels, indices 27-28
 
 See also: [`VectorizedLPCMFormat`](@ref), [`LPCMFormat`](@ref)
@@ -48,7 +48,7 @@ const _SUBSET_FORMAT_RE = r"^(lpcm(?:\.vectorized)?)\.subset\.(\d+)\.([\d,]+)$"
 function _register_channel_subset_lpcm_format!()
     return Onda.register_lpcm_format!() do file_format
         m = match(_SUBSET_FORMAT_RE, file_format)
-        m === nothing && return nothing
+        isnothing(m) && return nothing
         base_format = m.captures[1]
         total_channels = parse(Int, m.captures[2])
         indices = parse.(Int, split(m.captures[3], ','))

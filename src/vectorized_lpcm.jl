@@ -48,6 +48,7 @@ function Onda.serialize_lpcm(format::VectorizedLPCMFormat{S},
                             "match expected channel count ($n_channels)"))
     end
     if !(eltype(samples) <: S)
+        # note that Onda.jl itself doesn't provide this level of validation!
         throw(ArgumentError("`samples` eltype ($(eltype(samples))) does not " *
                             "match expected eltype ($S)"))
     end

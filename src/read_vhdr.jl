@@ -96,7 +96,7 @@ function read_vhdr(io::IO; codepage::Union{AbstractString,Nothing}=nothing)
                             join(repr.(_SUPPORTED_CODEPAGES), ", ")))
     end
     bytes = read(io)
-    cp = codepage === nothing ? _detect_codepage(bytes) : codepage
+    cp = @something(codepage, _detect_codepage(bytes))
     content = cp == "UTF-8" ? String(copy(bytes)) : _latin1_to_utf8(bytes)
     return _parse_vhdr(content)
 end
@@ -277,22 +277,26 @@ function parse_amplifier_setup(comment::String)
 
     # Locate the "A m p l i f i e r  S e t u p" banner line.
     amp_idx = findfirst(l -> startswith(strip(l), "A m p l i f i e r"), lines)
-    amp_idx === nothing && return nothing
+    isnothing(amp_idx) && return nothing
 
     # Parse the three info key-value lines.  They follow the "====" separator.
     info = Dict{String,String}()
     i = amp_idx + 2  # skip the banner line and the "====" separator
+    # TODO: add validation around units given in square brackets, e.g. 
+    # that Sampling Rate is Hz and Sampling Interval is µS
     while i <= length(lines)
         l = strip(lines[i])
         isempty(l) && break
         m = match(r"^(.+?)\s*:\s*(.+)$", l)
-        m !== nothing && (info[String(m[1])] = String(m[2]))
+        if !isnothing(m) 
+            info[String(m[1])] = String(m[2])
+        end
         i += 1
     end
 
     # Find the channel-table header line (first line starting with "#").
     hash_idx = findnext(l -> startswith(strip(l), "#"), lines, amp_idx + 1)
-    hash_idx === nothing && return (info, nothing)
+    isnothing(hash_idx) && return (info, nothing)
 
     # Parse channel data rows.  Each row starts with a digit (the channel number).
     # Columns are separated by 2+ spaces in both the header and data rows; splitting
@@ -339,12 +343,12 @@ function parse_software_filters(comment::String)
 
     # Locate the "S o f t w a r e  F i l t e r s" banner line.
     sw_idx = findfirst(l -> startswith(strip(l), "S o f t w a r e"), lines)
-    sw_idx === nothing && return nothing
+    isnothing(sw_idx) && return nothing
 
     # Find the channel-table header line (starts with "#") after the banner.
     # If not present the section contains prose (e.g. "Disabled") — return nothing.
     hash_idx = findnext(l -> startswith(strip(l), "#"), lines, sw_idx + 1)
-    hash_idx === nothing && return nothing
+    isnothing(hash_idx) && return nothing
 
     # Parse 4-column data rows.  Each row starts with a digit (the channel number).
     cols = ntuple(_ -> String[], 4)
@@ -364,9 +368,9 @@ function parse_software_filters(comment::String)
     # Augment with channel names from the Amplifier Setup section when available
     # and the row counts agree.
     amp_result = parse_amplifier_setup(comment)
-    if amp_result !== nothing
+    if !isnothing(amp_result)
         _, amp_ch = amp_result
-        if amp_ch !== nothing && length(amp_ch.name) == length(cols[1])
+        if !isnothing(amp_ch) && length(amp_ch.name) == length(cols[1])
             return NamedTuple{_SW_FILTER_COLS_WITH_NAMES}((cols[1], amp_ch.name,
                                                            cols[2], cols[3], cols[4]))
         end
@@ -396,7 +400,7 @@ function parse_impedances(comment::String)
 
     # Find the "Impedance [kOhm] at HH:MM:SS :" header line.
     imp_idx = findfirst(l -> occursin("Impedance [kOhm] at", l), lines)
-    imp_idx === nothing && return nothing
+    isnothing(imp_idx) && return nothing
 
     # Parse entries from the next line onwards.
     # Each entry has the form "Name:   value" where value is a number or "???".

@@ -15,13 +15,14 @@ and return its value.  Falls back to `"Latin-1"` when the key is absent.
 function _detect_codepage(bytes::Vector{UInt8})
     pattern = b"Codepage="
     idx = findfirst(pattern, bytes)
-    idx === nothing && return "Latin-1"
+    isnothing(idx) && return "Latin-1"
     start = last(idx) + 1
     stop = start
     n = length(bytes)
     while stop <= n && bytes[stop] != UInt8('\n') && bytes[stop] != UInt8('\r')
         stop += 1
     end
+    # FIXME: can this be reinterpret cast or something else to avoid an intermediate allocation?
     value = String(bytes[start:(stop - 1)])
     return strip(value)
 end
@@ -78,7 +79,7 @@ without a `nothing` check.
 """
 function _parse_coordinates(coords::Union{Nothing,Dict{String,String}},
                             ch_info::Dict{String,String}, n_channels::Int)
-    if coords === nothing || isempty(coords)
+    if isnothing(coords) || isempty(coords)
         return (; channel=String[], radius=Float64[], theta=Float64[], phi=Float64[])
     end
     names, _, _ = _parse_channel_info(ch_info, n_channels)
@@ -116,4 +117,8 @@ function _latin1_to_utf8(bytes::Vector{UInt8})
         end
     end
     return String(take!(buf))
+end
+
+function _empty_column_table(names::Tuple, T::Type=String)
+  return NamedTuple{names}(T[] for _ in 1:length(names))
 end

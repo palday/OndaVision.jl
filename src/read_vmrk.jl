@@ -65,13 +65,13 @@ function read_vmrk(filename; kwargs...)
 end
 
 function read_vmrk(io::IO; codepage::Union{AbstractString,Nothing}=nothing)
-    if codepage !== nothing && codepage ∉ _SUPPORTED_CODEPAGES
+    if !isnothing(codepage) && codepage ∉ _SUPPORTED_CODEPAGES
         throw(ArgumentError("unsupported codepage \"$codepage\"; " *
                             "supported values are: " *
                             join(repr.(_SUPPORTED_CODEPAGES), ", ")))
     end
     bytes = read(io)
-    cp = codepage === nothing ? _detect_codepage(bytes) : codepage
+    cp = @something(codepage, _detect_codepage(bytes))
     content = cp == "UTF-8" ? String(copy(bytes)) : _latin1_to_utf8(bytes)
     return _parse_vmrk(content)
 end
@@ -164,6 +164,7 @@ function _validate_vmrk(raw_sections::Dict{String,Dict{String,String}})
 
     # --- Mandatory Common Infos keys ---
     for key in _REQUIRED_VMRK_COMMON_INFOS_KEYS
+        # TODO: use setdiff to validate all keys at once and give a comprehensive error message
         haskey(ci, key) ||
             error("mandatory key \"$key\" is missing from [Common Infos]")
     end
@@ -218,7 +219,7 @@ function _parse_marker_infos(entries::Dict{String,String})
 
         pos_str = strip(parts[3])
         pos = tryparse(Int, pos_str)
-        pos === nothing &&
+        isnothing(pos) &&
             error("position in Mk$i is not a valid integer: \"$pos_str\"")
         pos > 0 ||
             error("position in Mk$i must be > 0, got $pos")
@@ -226,7 +227,7 @@ function _parse_marker_infos(entries::Dict{String,String})
 
         pts_str = strip(parts[4])
         pts = tryparse(Int, pts_str)
-        pts === nothing &&
+        isnothing(pts) &&
             error("points in Mk$i is not a valid integer: \"$pts_str\"")
         pts >= 0 ||
             error("points in Mk$i must be >= 0, got $pts")
@@ -234,7 +235,7 @@ function _parse_marker_infos(entries::Dict{String,String})
 
         ch_str = strip(parts[5])
         ch = tryparse(Int, ch_str)
-        ch === nothing &&
+        isnothing(ch) &&
             error("channel number in Mk$i is not a valid integer: \"$ch_str\"")
         push!(channels, ch)
 

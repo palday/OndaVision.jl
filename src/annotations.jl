@@ -43,6 +43,8 @@ function brainvision_annotations(vmrk::Dict{String,Any}, sample_rate::Real;
                                  channel_names=nothing)
     markers = vmrk["Marker Infos"]
     n = length(markers.type)
+    # TODO: expose parameters to make this deterministic across runs
+    # maybe via `uuid5(recording, index)`?
     ids = [uuid4() for _ in 1:n]
     spans = map(markers.position, markers.points) do pos, pts
         n_pts = max(pts, 1)
@@ -53,6 +55,8 @@ function brainvision_annotations(vmrk::Dict{String,Any}, sample_rate::Real;
             id=ids,
             span=spans,
             marker_type=copy(markers.type),
+            # TODO: should there be an int-valued field that separates out the S/R code when present
+            # and defaults to missing/-1/nothing when absent?
             description=copy(markers.description),
             channel=channel_col)
 end
@@ -71,6 +75,7 @@ function brainvision_annotations(vhdr_filename;
                                  channel_names=true)
     vhdr = read_vhdr(vhdr_filename; codepage)
     ci = vhdr["Common Infos"]
+    # Sampling interval is provided in microseconds
     sample_rate = 1e6 / parse(Float64, ci["SamplingInterval"])
     vhdr_dir = dirname(abspath(vhdr_filename))
     haskey(ci, "MarkerFile") && !isempty(ci["MarkerFile"]) ||
@@ -79,7 +84,7 @@ function brainvision_annotations(vhdr_filename;
     isfile(vmrk_file) ||
         error("marker file \"$(ci["MarkerFile"])\" not found at \"$vmrk_file\"")
     vmrk = read_vmrk(vmrk_file; codepage)
-    resolved_names = if channel_names === true
+    resolved_names = if channel_names
         n_ch = parse(Int, ci["NumberOfChannels"])
         names, _, _ = _parse_channel_info(vhdr["Channel Infos"], n_ch)
         lowercase.(names)
