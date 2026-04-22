@@ -28,7 +28,7 @@ end
     ov = read_brainvision(path)
     mne = _mne_load(path)
     @test size(ov) == size(mne)
-    @test ov ≈ mne
+    @test all(ov .≈ mne)
 end
 
 @testset "PyMNE comparison — test.vhdr (µV channels only)" begin
@@ -39,7 +39,7 @@ end
     ov = read_brainvision(path)
     mne = _mne_load(path)
     @test size(ov) == size(mne)
-    @test ov[1:26, :] ≈ mne[1:26, :]
+    @test all(@view(ov[1:26, :]) .≈ @view(mne[1:26, :]))
 end
 
 # ---------------------------------------------------------------------------
