@@ -24,4 +24,10 @@ When running individual tests in Julia, you need to load the test environment. T
 
 Tests should be located in a file with the same name as the source file. For example, tests for code in `src/read_vhdr.jl` should reside in `test/read_vhdr.jl`. Do not use `@test_warn`. When testing warnings, use `@test_logs` with the appropriate logging level, e.g. `:warn`. For tests where a warning is issued, use the `@suppressor` macro from Suppressor.jl to hide the warning during testing.
 
-There are several example BrainVision files in the `test/data` directory which you may use to test the implementation. 
+All shared test state — `using` statements, shared constants, and shared helper functions — belongs in `set_up_tests.jl`. Individual test files should not define their own constants or helpers if they are used across files.
+
+When creating temporary directories in tests, use the `do`-block form: `mktempdir() do tempdir ... end`. This ensures cleanup even if the test errors.
+
+When testing approximate equality of arrays, use `all(A .≈ B)` rather than `A ≈ B`. The latter uses a norm-based tolerance that can mask per-element discrepancies.
+
+There are several example BrainVision files in the `test/data` directory which you may use to test the implementation.
