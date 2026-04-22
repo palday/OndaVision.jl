@@ -63,8 +63,8 @@ path to the underlying binary file.  Load the actual samples with
 using Onda
 
 sig = result.signals[1]
-samples = Onda.load(sig)       # returns a SampleV2 (channels × time matrix)
-data = samples.data            # Matrix{Int16} or Matrix{Float32} in physical units
+samples = Onda.load(sig)       
+data = samples.data            
 ```
 
 ### Working with annotations
@@ -101,6 +101,8 @@ vhdr_path = write_brainvision(
 
 The function writes `output.vhdr`, `output.eeg`, and (when annotations
 are provided) `output.vmrk`, returning the path to the `.vhdr` file.
+
+<!-- TODO: should vmrk always be written to indicate at least one segment?? -->
 
 ### A complete round-trip
 
@@ -234,3 +236,5 @@ a 3-D array or a vector of matrices.  [`read_brainvision_onda`](@ref)
 treats the entire file as a single continuous recording; segmentation
 information is preserved only through the "New Segment" annotations in
 the annotation table.
+
+<!-- TODO: Fix onda-fication of segmented recordings by splitting each segment into a different signal with its own span -->
