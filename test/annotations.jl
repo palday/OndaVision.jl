@@ -1,7 +1,3 @@
-const _VMRK_FILE = joinpath(DATA_DIR, "test.vmrk")
-const _VHDR_FILE = joinpath(DATA_DIR, "test_highpass.vhdr")
-const _SAMPLE_RATE = 1000.0  # Hz (SamplingInterval=1000 µs)
-
 @testset "structure" begin
     result = @suppress brainvision_annotations(@suppress(read_vmrk(_VMRK_FILE)),
                                                _SAMPLE_RATE)

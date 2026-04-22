@@ -1,21 +1,3 @@
-using PyMNE
-using PythonCall
-
-_vhdr(name) = joinpath(@__DIR__, "data", name)
-
-const _warnings = PythonCall.pynew()
-PythonCall.pycopy!(_warnings, pyimport("warnings"))
-
-# Load a file via MNE-Python and return data as a (n_channels × n_samples) Matrix{Float64}
-# in µV (MNE stores data internally in V; we rescale to µV for comparison).
-function _mne_load(vhdr_path)
-    _warnings.filterwarnings("ignore")
-    raw = PyMNE.io.read_raw_brainvision(vhdr_path; preload=true, verbose=false)
-    _warnings.resetwarnings()
-    data = pyconvert(Matrix{Float64}, raw.get_data())
-    return data .* 1e6
-end
-
 # ---------------------------------------------------------------------------
 # PyMNE correctness comparisons
 # ---------------------------------------------------------------------------
@@ -24,7 +6,7 @@ end
 
 @testset "PyMNE comparison — $name" for name in
                                         ["testv2.vhdr", "test_float32_vectorized.vhdr"]
-    path = _vhdr(name)
+    path = vhdr(name)
     ov = read_brainvision(path)
     mne = _mne_load(path)
     @test size(ov) == size(mne)
@@ -35,7 +17,7 @@ end
     # Channels 27–32 have non-µV units (BS, µS, ARU, uS, S, C).
     # MNE applies different per-unit scaling for unknown units (no ×1e-6),
     # so comparing raw MNE output ×1e6 is only valid for the 26 µV channels.
-    path = _vhdr("test.vhdr")
+    path = vhdr("test.vhdr")
     ov = read_brainvision(path)
     mne = _mne_load(path)
     @test size(ov) == size(mne)
@@ -47,14 +29,14 @@ end
 # ---------------------------------------------------------------------------
 
 @testset "INT_16 MULTIPLEXED single segment" begin
-    result = read_brainvision(_vhdr("test.vhdr"))
+    result = read_brainvision(vhdr("test.vhdr"))
     @test result isa Matrix{Float64}
     # 32 channels, 505600 bytes / (32 ch × 2 bytes) = 7900 samples
     @test size(result) == (32, 7900)
 end
 
 @testset "FLOAT32 VECTORIZED single segment" begin
-    result = read_brainvision(_vhdr("test_float32_vectorized.vhdr"))
+    result = read_brainvision(vhdr("test_float32_vectorized.vhdr"))
     @test result isa Matrix{Float64}
     @test size(result) == (2, 4)
     # ch1 samples [1,2,3,4] and ch2 samples [5,6,7,8], resolution=1.0
@@ -63,7 +45,7 @@ end
 end
 
 @testset "resolution factor is applied" begin
-    result = read_brainvision(_vhdr("test.vhdr"))
+    result = read_brainvision(vhdr("test.vhdr"))
     # INT_16 raw values are up to ±32767; with resolution 0.5 µV, scaled max ≈ ±16383 µV.
     # Without resolution the values would stay as raw Int16 counts.
     @test maximum(abs, result) <= 16384.0
@@ -73,7 +55,7 @@ end
     # test_old_layout_latin1_software_filter has two New Segment markers:
     # position 1 (1 sample) and position 2 (250 samples) → unequal lengths.
     # The file also lacks a Codepage key → codepage warning; suppress output.
-    result = @suppress read_brainvision(_vhdr("test_old_layout_latin1_software_filter.vhdr"))
+    result = @suppress read_brainvision(vhdr("test_old_layout_latin1_software_filter.vhdr"))
     @test result isa Vector{Matrix{Float64}}
     @test length(result) == 2
     @test size(result[1]) == (29, 1)
@@ -129,7 +111,7 @@ end
 
 @testset "VMRK DataFile mismatch → warning" begin
     mktempdir() do dir
-        cp(_vhdr("test.eeg"), joinpath(dir, "test.eeg"))
+        cp(vhdr("test.eeg"), joinpath(dir, "test.eeg"))
 
         write(joinpath(dir, "mismatch.vmrk"), """
             BrainVision Data Exchange Marker File Version 1.0
@@ -165,7 +147,7 @@ end
 
 @testset "missing VMRK file → warning, returns 2-D" begin
     mktempdir() do dir
-        cp(_vhdr("test.eeg"), joinpath(dir, "test.eeg"))
+        cp(vhdr("test.eeg"), joinpath(dir, "test.eeg"))
 
         write(joinpath(dir, "test.vhdr"),
               """

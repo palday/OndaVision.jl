@@ -1,18 +1,16 @@
-_vmrk(name) = joinpath(@__DIR__, "data", name)
-
 @testset "identification line" begin
-    d = read_vmrk(_vmrk("test.vmrk"))
+    d = read_vmrk(vhdr("test.vmrk"))
     @test d["identification"] == "Brain Vision Data Exchange Marker File, Version 1.0"
 
-    d2 = read_vmrk(_vmrk("testv2.vmrk"))
+    d2 = read_vmrk(vhdr("testv2.vmrk"))
     @test d2["identification"] == "Brain Vision Data Exchange Marker File, Version 2.0"
 
-    d3 = @suppress read_vmrk(_vmrk("test_old_layout_latin1_software_filter.vmrk"))
+    d3 = @suppress read_vmrk(vhdr("test_old_layout_latin1_software_filter.vmrk"))
     @test d3["identification"] == "Brain Vision Data Exchange Marker File, Version 1.0"
 end
 
 @testset "Common Infos section" begin
-    d = read_vmrk(_vmrk("test.vmrk"))
+    d = read_vmrk(vhdr("test.vmrk"))
     ci = d["Common Infos"]
     @test ci isa Dict{String,String}
     @test ci["Codepage"] == "UTF-8"
@@ -20,7 +18,7 @@ end
 end
 
 @testset "Marker Infos section — structure" begin
-    d = read_vmrk(_vmrk("test.vmrk"))
+    d = read_vmrk(vhdr("test.vmrk"))
     @test haskey(d, "Marker Infos")
     markers = d["Marker Infos"]
     @test markers isa NamedTuple
@@ -34,7 +32,7 @@ end
 end
 
 @testset "Marker Infos section — column types" begin
-    d = read_vmrk(_vmrk("test.vmrk"))
+    d = read_vmrk(vhdr("test.vmrk"))
     markers = d["Marker Infos"]
     @test markers.type isa Vector{String}
     @test markers.description isa Vector{String}
@@ -45,7 +43,7 @@ end
 end
 
 @testset "Marker Infos section — values" begin
-    d = read_vmrk(_vmrk("test.vmrk"))
+    d = read_vmrk(vhdr("test.vmrk"))
     markers = d["Marker Infos"]
 
     # Mk1: New Segment with date, zero-length description
@@ -79,7 +77,7 @@ end
 end
 
 @testset "Marker Infos section — date optional" begin
-    d1 = read_vmrk(_vmrk("test.vmrk"))
+    d1 = read_vmrk(vhdr("test.vmrk"))
     markers1 = d1["Marker Infos"]
     # Mk1 has a date, all others do not
     @test !ismissing(markers1.date[1])
@@ -88,28 +86,28 @@ end
     end
 
     # testv2.vmrk: no markers have a date
-    d2 = read_vmrk(_vmrk("testv2.vmrk"))
+    d2 = read_vmrk(vhdr("testv2.vmrk"))
     @test all(ismissing, d2["Marker Infos"].date)
 
     # old layout: all markers have dates
-    d3 = @suppress read_vmrk(_vmrk("test_old_layout_latin1_software_filter.vmrk"))
+    d3 = @suppress read_vmrk(vhdr("test_old_layout_latin1_software_filter.vmrk"))
     @test all(!ismissing, d3["Marker Infos"].date)
 end
 
 @testset "Marker Infos section — channel 0 means all channels" begin
-    d = read_vmrk(_vmrk("test.vmrk"))
+    d = read_vmrk(vhdr("test.vmrk"))
     @test all(==(0), d["Marker Infos"].channel)
 end
 
 @testset "v2 extra sections" begin
-    d = read_vmrk(_vmrk("testv2.vmrk"))
+    d = read_vmrk(vhdr("testv2.vmrk"))
     @test haskey(d, "Marker User Infos")
     @test d["Marker User Infos"] isa Dict{String,String}
     @test isempty(d["Marker User Infos"])
 end
 
 @testset "v2 marker count and special descriptions" begin
-    d = read_vmrk(_vmrk("testv2.vmrk"))
+    d = read_vmrk(vhdr("testv2.vmrk"))
     markers = d["Marker Infos"]
     @test length(markers.type) == 16
 
@@ -124,7 +122,7 @@ end
 end
 
 @testset "Latin-1 encoding auto-detected" begin
-    d = @suppress read_vmrk(_vmrk("test_old_layout_latin1_software_filter.vmrk"))
+    d = @suppress read_vmrk(vhdr("test_old_layout_latin1_software_filter.vmrk"))
     ci = d["Common Infos"]
     @test !haskey(ci, "Codepage")
     @test ci["DataFile"] == "test_old_layout_latin1_software_filter.eeg"
@@ -138,22 +136,22 @@ end
 end
 
 @testset "IO interface" begin
-    expected = read_vmrk(_vmrk("test.vmrk"))
-    result = open(_vmrk("test.vmrk"), "r") do io
+    expected = read_vmrk(vhdr("test.vmrk"))
+    result = open(vhdr("test.vmrk"), "r") do io
         return read_vmrk(io)
     end
     # isequal is used instead of == because the date column contains missing values,
     # and missing == missing returns missing rather than true.
     @test isequal(result, expected)
 
-    bytes = read(_vmrk("testv2.vmrk"))
+    bytes = read(vhdr("testv2.vmrk"))
     buf_result = read_vmrk(IOBuffer(bytes))
-    file_result = read_vmrk(_vmrk("testv2.vmrk"))
+    file_result = read_vmrk(vhdr("testv2.vmrk"))
     @test isequal(buf_result, file_result)
 end
 
 @testset "unsupported codepage keyword" begin
-    err = @test_throws ArgumentError read_vmrk(_vmrk("test.vmrk"); codepage="Windows-1252")
+    err = @test_throws ArgumentError read_vmrk(vhdr("test.vmrk"); codepage="Windows-1252")
     @test occursin("unsupported codepage", err.value.msg)
     @test occursin("Windows-1252", err.value.msg)
 end
@@ -343,7 +341,7 @@ DataFile=test.eeg
 end
 
 @testset "get_segments — single segment" begin
-    d = read_vmrk(_vmrk("test.vmrk"))
+    d = read_vmrk(vhdr("test.vmrk"))
     segs = get_segments(d)
     @test segs isa NamedTuple
     @test hasproperty(segs, :type)
@@ -356,7 +354,7 @@ end
 end
 
 @testset "get_segments — multiple segments" begin
-    d = @suppress read_vmrk(_vmrk("test_old_layout_latin1_software_filter.vmrk"))
+    d = @suppress read_vmrk(vhdr("test_old_layout_latin1_software_filter.vmrk"))
     segs = get_segments(d)
     @test length(segs.type) == 2
     @test all(==("New Segment"), segs.type)
@@ -387,7 +385,7 @@ Mk2=Response,R1,200,1,0
 end
 
 @testset "get_segments — non-segment markers excluded" begin
-    d = read_vmrk(_vmrk("test.vmrk"))
+    d = read_vmrk(vhdr("test.vmrk"))
     segs = get_segments(d)
     # test.vmrk has 14 markers total, only 1 is New Segment
     @test length(segs.type) == 1

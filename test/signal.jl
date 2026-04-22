@@ -1,10 +1,3 @@
-using Onda
-using Dates
-using TimeSpans
-using UUIDs
-
-const DATA_DIR = joinpath(@__DIR__, "data")
-
 @testset "unit normalization" begin
     @test OndaVision._normalize_bv_unit("") == "microvolt"
     @test OndaVision._normalize_bv_unit("µV") == "microvolt"    # U+00B5

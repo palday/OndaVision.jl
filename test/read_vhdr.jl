@@ -1,6 +1,3 @@
-const DATA_DIR = joinpath(@__DIR__, "data")
-vhdr(name) = joinpath(DATA_DIR, name)
-
 @testset "identification line" begin
     # v1.0 — old-style identification with space between Brain/Vision
     d = read_vhdr(vhdr("test.vhdr"))

@@ -1,8 +1,3 @@
-using Dates
-using Onda
-using TimeSpans
-using UUIDs
-
 @testset "return shape" begin
     result = @suppress read_brainvision_onda(joinpath(DATA_DIR, "test.vhdr"))
     @test result isa NamedTuple
