@@ -37,7 +37,7 @@ For the full format specification see the
 ## The Onda Format
 
 [Onda](https://github.com/beacon-biosignals/Onda.jl?tab=readme-ov-file#the-onda-format-specification)
-is an open, Arrow-based format for multi-channel biosignal data.  It
+is an open, Arrow-based format for multi-channel LPCM data, including biosignal data.  It
 separates *signal metadata* from the raw binary samples, making it easy
 to work with large datasets without loading all data into memory.
 
