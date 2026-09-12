@@ -17,10 +17,10 @@ jobs:
         julia-version: [min]
     steps:
       - uses: actions/checkout@v6.0.2
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.julia-version }}
-      - uses: julia-actions/cache@e97f6fc1a6e21c82253c85e269be7340376aa425 # v3.0.1
+      - uses: julia-actions/cache@a45e8fa8be21c18a06b7177052533149e61e9b38 # v3.1.0
       - name: Install JuliaFormatter
         shell: julia --project=@format --color=yes {0}
         run: |
